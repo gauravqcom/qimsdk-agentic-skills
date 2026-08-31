@@ -153,6 +153,10 @@ flowchart TD
   OVL --> SINK[waylandsink]
 ```
 
+## Copyright/SPDX Headers
+
+- If a pipeline leveraged from `references/pipeline-cache/` carries a copyright/SPDX header, strip it from the final artifact — that header belongs to the cache entry, not to the generated output.
+
 ## Final Response Rules
 
 - Report created file paths.
