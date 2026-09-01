@@ -913,7 +913,7 @@ def check_sdk_env(host, user, key_path, build_dir, password=None, timeout=15, po
 def check_qimsdk_sdk_env(host, user, key_path, build_dir, password=None, timeout=20, port=22):
     """
     Mode D: verify the Yocto standard SDK is installed under {build_dir}/qcom-sdk,
-    that the cross C++ compiler works, and that libqtiimsdk + <qti/imsdk.h> resolve
+    that the cross C++ compiler works, and that libqimsdk-app-builder + qimsdk.h resolve
     in the SDK target sysroot (so a standalone SDK-consumer build can link).
 
     The env-setup script name is version-specific (e.g.
@@ -968,32 +968,32 @@ def check_qimsdk_sdk_env(host, user, key_path, build_dir, password=None, timeout
                 f'Yocto SDK not found under {sdk_dir}'
             ), 'warn'
 
-        # Confirm the cross C++ compiler runs and sysroot ships libqtiimsdk + header.
+        # Confirm the cross C++ compiler runs and sysroot ships libqimsdk-app-builder + header.
         probe = _ssh_run(
             client,
             f"bash -c '. {env_script} && "
             f'echo CXX=$CXX && '
             f'"$CXX" --version 2>&1 | head -1 && '
             f'echo SYSROOT=$SDKTARGETSYSROOT && '
-            f'ls "$SDKTARGETSYSROOT"/usr/lib/libqtiimsdk.so* 2>/dev/null | head -1 && '
-            f'(find "$SDKTARGETSYSROOT" -name imsdk.h 2>/dev/null | head -1)\'',
+            f'ls "$SDKTARGETSYSROOT"/usr/lib/libqimsdk-app-builder.so* 2>/dev/null | head -1 && '
+            f'(find "$SDKTARGETSYSROOT" -name qimsdk.h 2>/dev/null | head -1)\'',
             timeout=timeout,
         )
-        has_lib = 'libqtiimsdk.so' in probe
-        has_hdr = 'imsdk.h' in probe
+        has_lib = 'libqimsdk-app-builder.so' in probe
+        has_hdr = 'qimsdk.h' in probe
         compiler_ok = 'qcom-linux' in probe and ('(GCC)' in probe or 'clang version' in probe.lower()
                                                  or 'gcc version' in probe.lower())
         if compiler_ok and has_lib and has_hdr:
-            return True, f'Yocto SDK validated ({env_script}); libqtiimsdk + imsdk.h resolvable in sysroot', 'ok'
+            return True, f'Yocto SDK validated ({env_script}); libqimsdk-app-builder + qimsdk.h resolvable in sysroot', 'ok'
         if compiler_ok and not (has_lib and has_hdr):
             # Toolchain is fine but the SDK sysroot lacks the C++ IMSDK dev files —
-            # a standalone build's find_library(qtiimsdk) will fail. WARN loudly.
+            # a standalone build's target_link_libraries(qimsdk-app-builder) will fail. WARN loudly.
             missing = ', '.join(
-                m for m, present in (('libqtiimsdk.so', has_lib), ('imsdk.h', has_hdr)) if not present
+                m for m, present in (('libqimsdk-app-builder.so', has_lib), ('qimsdk.h', has_hdr)) if not present
             )
             return False, (
                 f'SDK toolchain works but sysroot is missing {missing} — a standalone '
-                f'cpp-app-builder build cannot link qtiimsdk. Probe: {probe!r}'
+                f'cpp-app-builder build cannot link qimsdk-app-builder. Probe: {probe!r}'
             ), 'warn'
         return False, f'SDK env found at {env_script} but cross compiler not working. Probe: {probe!r}', 'fail'
     finally:
@@ -1416,19 +1416,20 @@ def run(mode, device_ip, device_user, host_key,
             if not odev_ok:
                 all_ok = False
 
-            # Runtime lib: a cpp-app-builder binary dynamically links libqtiimsdk.so.1.
-            # If it's absent the binary won't start — WARN (device-provisioning issue,
-            # not a build problem) so the user can install the C++ IMSDK runtime.
+            # Runtime lib: a cpp-app-builder binary dynamically links
+            # libqimsdk-app-builder.so.1. If it's absent the binary won't start —
+            # WARN (device-provisioning issue, not a build problem) so the user
+            # can install the C++ IMSDK runtime.
             lib_out = _ssh_run(
                 device_client,
-                'ls /usr/lib/libqtiimsdk.so* 2>/dev/null | head -1; '
-                'find / -name "libqtiimsdk.so*" 2>/dev/null | head -1'
+                'ls /usr/lib/libqimsdk-app-builder.so* 2>/dev/null | head -1; '
+                'find / -name "libqimsdk-app-builder.so*" 2>/dev/null | head -1'
             )
-            if 'libqtiimsdk.so' in lib_out:
-                add(ok(f'libqtiimsdk runtime present: {lib_out.strip().splitlines()[0]}'))
+            if 'libqimsdk-app-builder.so' in lib_out:
+                add(ok(f'libqimsdk-app-builder runtime present: {lib_out.strip().splitlines()[0]}'))
             else:
                 add(warn(
-                    'libqtiimsdk.so not found on device — a Mode D C++ binary links it at '
+                    'libqimsdk-app-builder.so not found on device — a Mode D C++ binary links it at '
                     'runtime and will fail to start until the C++ IMSDK runtime library is '
                     'installed on the device (or shipped alongside the binary).'
                 ))
@@ -1644,7 +1645,7 @@ def run(mode, device_ip, device_user, host_key,
                         add(indent(line))
                     add('')
 
-                    # Yocto SDK + sysroot qtiimsdk resolvability.
+                    # Yocto SDK + sysroot qimsdk-app-builder resolvability.
                     sdk_ok, sdk_msg, sdk_sev = check_qimsdk_sdk_env(
                         linux_workstation_host, linux_workstation_user, linux_workstation_key_path,
                         linux_workstation_build_dir, password=linux_workstation_password,

@@ -105,7 +105,7 @@ Mode D requires on the Linux/WSL workstation:
 - ~5GB free disk on local (non-NFS) filesystem (for the Yocto SDK)
 
 Mode D requires on device:
-- `libqtiimsdk.so` runtime library present (WARN only) — a Mode D binary dynamically links it;
+- `libqimsdk-app-builder.so` runtime library present (WARN only) — a Mode D binary dynamically links it;
   if preflight WARNs it's missing, install the C++ IMSDK runtime on the device before deploying
   or the binary will fail to start.
 
@@ -1083,15 +1083,15 @@ See [Common Run/Pull Steps](#common-runpull-steps) below.
 ## Mode D — C++ Standalone Host Build
 
 Use when: artifact is from **qimsdk-cpp-app-builder** — `main.cc` + `CMakeLists.txt` with
-`set(TEST_TARGET "...")`, using the `qti::Pipeline` / `<qti/imsdk.h>` C++ API and linking a single
-`qtiimsdk` library. This is a **different builder contract than Mode C** (which targets
+`set(TEST_TARGET "...")`, using the `qti::Pipeline` / `<qti/qimsdk.h>` C++ API and linking a single
+`qimsdk-app-builder` library. This is a **different builder contract than Mode C** (which targets
 gstreamer-app-builder's `main.c` + `GST_EXAMPLE_BIN` C sample apps) — do not confuse the two by
 CMake shape alone; check for `TEST_TARGET` (Mode D) vs `GST_EXAMPLE_BIN` (Mode C).
 
 Requires a Linux x86_64 or WSL workstation, same as Mode C — Mode D reuses every
 `LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D never clones or
 mutates a shared source tree.** Each app is cross-built **standalone, out of tree**, against the
-**Yocto standard SDK** (not gst-plugins-imsdk) — `libqtiimsdk.so` ships inside the SDK's target
+**Yocto standard SDK** (not gst-plugins-imsdk) — `libqimsdk-app-builder.so` ships inside the SDK's target
 sysroot, so there is no "build the C++ IMSDK SDK from source" step.
 
 **Script:** `references/deploy_mode_d.py` (build delegated to `references/workspace_setup_d.py`)
@@ -1122,11 +1122,10 @@ so it is discovered by glob, not hardcoded.
 1. **Parse artifact** — extract the target name from `set(TEST_TARGET "<name>")` (fallback:
    `add_executable`/`project`), confirm `main.cc` exists.
 2. **Push source to an isolated per-app dir** — `{LINUX_WORKSTATION_BUILD_DIR}/qimsdk-cpp-apps/<target>/`.
-   The artifact's own `CMakeLists.txt` is **not** used for the build — it links a bare `qtiimsdk`
-   target that only resolves inside the full IMSDK source tree. Deploy instead generates a
-   **standalone wrapper CMakeLists.txt** (pushed in its place) that resolves the library via
-   `find_library(QTIIMSDK_LIBRARY NAMES qtiimsdk PATHS "$ENV{SDKTARGETSYSROOT}/usr/lib" REQUIRED)` —
-   the original is preserved alongside as `CMakeLists.artifact.txt` for reference.
+   The artifact's own `CMakeLists.txt` **is** used for the build, unmodified — it links
+   `qimsdk-app-builder` via a plain `target_link_libraries()`, which cmake resolves against the
+   SDK target sysroot's standard lib search path once `environment-setup-*-qcom-linux` is sourced
+   (the cross `CXX` has `--sysroot` baked in). No wrapper CMakeLists.txt is generated.
 3. **Configure + build** in the sourced SDK env:
    ```bash
    . <sdk_dir>/environment-setup-*-qcom-linux
@@ -1145,7 +1144,7 @@ so it is discovered by glob, not hardcoded.
 7. **Verify + pull output** — moov-atom check (`gst-discoverer-1.0`) for `.mp4` outputs, then pull;
    SIGSEGV auto-retry once after a 15s settle (Mode A's working retry pattern — not Mode C's).
 
-> **Runtime dependency:** the built binary dynamically links `libqtiimsdk.so.1`. If preflight WARNs
+> **Runtime dependency:** the built binary dynamically links `libqimsdk-app-builder.so.1`. If preflight WARNs
 > it's missing on the device, install the C++ IMSDK runtime library there before deploying — the
 > binary will fail to start otherwise. This is a device-provisioning step, not something deploy
 > fixes automatically (Fail Fast, Don't Fix).
