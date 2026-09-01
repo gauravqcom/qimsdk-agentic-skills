@@ -409,7 +409,7 @@ distinct choice, not to be merged or abbreviated when relaying to the user:**
 - **Mode A** — artifact is a `pipeline.sh` (gst-launch command). No build needed.
 - **Mode B** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is Ubuntu with QIMSDK source tree on-device.
 - **Mode C** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is QLI 2.0 / host build (no build tools). Needs a Linux workstation (x86_64 or aarch64 — arch is auto-detected; WSL on either Windows x86_64 or Windows ARM works).
-- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/imsdk.h>` (cpp-app-builder). Needs a Linux x86_64/WSL workstation (no arch auto-detection — the Yocto SDK zip in use is x86_64-only).
+- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/qimsdk.h>` (cpp-app-builder). Needs a Linux x86_64/WSL workstation (no arch auto-detection — the Yocto SDK zip in use is x86_64-only).
 - **Mode P** — artifact has `main.py` (or legacy `app.py`) using `qimsdk.Pipeline`. No build.
 
 Mode C and Mode D both host-build on a workstation and push a binary to the device, but they target

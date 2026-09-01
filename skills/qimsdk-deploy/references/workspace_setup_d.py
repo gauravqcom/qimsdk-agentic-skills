@@ -6,7 +6,7 @@
 workspace_setup_d.py — Idempotent Mode D workspace setup and standalone app build.
 
 Mode D cross-builds a qimsdk-cpp-app-builder C++ app (main.cc using the
-qti::Pipeline / <qti/imsdk.h> C++ API) against the Yocto standard SDK on a
+qti::Pipeline / <qti/qimsdk.h> C++ API) against the Yocto standard SDK on a
 Linux or WSL x86_64 workstation, then the deploy script ships the ARM64 binary
 to the QLI device.
 
