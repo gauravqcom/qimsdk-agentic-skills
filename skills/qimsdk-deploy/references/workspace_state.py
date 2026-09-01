@@ -27,9 +27,10 @@ Mode D states (Linux/WSL workstation host build of a standalone IMSDK C++ SDK ap
   2  App source pushed, no build/CMakeCache.txt (cmake not configured)
   3  cmake configured, binary not yet built
   4  {BUILD_DIR}/qimsdk-cpp-apps/{target}/build/{target} exists
-Unlike Mode C there is no git clone and no SDK-from-source build: libqtiimsdk.so ships
-inside the Yocto SDK target sysroot, and each app is built out-of-tree as a standalone
-SDK consumer (a generated wrapper CMakeLists.txt resolves qtiimsdk via find_library).
+Unlike Mode C there is no git clone and no SDK-from-source build: libqimsdk-app-builder.so
+ships inside the Yocto SDK target sysroot, and each app is built out-of-tree as a standalone
+SDK consumer using the artifact's own CMakeLists.txt as-is (target_link_libraries resolves
+qimsdk-app-builder via the sysroot's standard lib search path — no find_library() needed).
 
 All functions take a connected SSH client object with a .run(cmd, timeout) method
 that returns (stdout, stderr, exit_code). The _ssh_blocking helper wraps a
@@ -258,9 +259,15 @@ def detect_mode_d_state(ssh_dc, build_dir, target_name=None):
                 'detail': f'SDK installed but app source not pushed to {app_dir}'}
 
     build_cache = f'{app_dir}/build/CMakeCache.txt'
-    if not _exists(ssh_dc, build_cache, is_file=True):
+    build_makefile = f'{app_dir}/build/Makefile'
+    # Require BOTH CMakeCache.txt and Makefile — a configure that errored out
+    # partway (e.g. a failed find_library()) can leave CMakeCache.txt behind
+    # with no Makefile ever generated. Checking CMakeCache.txt alone treats
+    # that broken half-state as "configured" and skips straight to a doomed
+    # cmake --build with no Makefile to build from.
+    if not (_exists(ssh_dc, build_cache, is_file=True) and _exists(ssh_dc, build_makefile, is_file=True)):
         return {'state': 2, 'env_script': env_script, 'sdk_dir': sdk_dir, 'app_dir': app_dir,
-                'detail': f'App source pushed but build/ not configured (no CMakeCache.txt)'}
+                'detail': f'App source pushed but build/ not configured (no CMakeCache.txt/Makefile)'}
 
     binary_path = f'{app_dir}/build/{target_name}'
     if not _exists(ssh_dc, binary_path, is_file=True):

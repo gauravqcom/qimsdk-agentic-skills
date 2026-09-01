@@ -8,7 +8,7 @@ workstation, deploy the ARM64 binary to a QLI/Yocto device, and run it.
 
 Mode D targets the qimsdk-cpp-app-builder artifact contract:
   main.cc + CMakeLists.txt (set(TEST_TARGET "...")) using the qti::Pipeline /
-  <qti/imsdk.h> C++ API, linking a single qtiimsdk library.
+  <qti/imsdk.h> C++ API, linking a single qimsdk-app-builder library.
 
 It is the C++-SDK sibling of Mode C (which builds gstreamer-app-builder C sample
 apps inside the gst-plugins-imsdk source tree). Mode D instead cross-builds each
@@ -833,7 +833,7 @@ def deploy_mode_d(
 
             result['build_passed'] = True
             _step(result, 'sdk_verify',    'ok', 'handled by workspace_setup_d')
-            _step(result, 'qimsdk_check',  'ok', 'qtiimsdk resolved from SDK sysroot')
+            _step(result, 'qimsdk_check',  'ok', 'qimsdk-app-builder resolved from SDK sysroot')
             _step(result, 'push_source',   'ok', 'handled by workspace_setup_d')
             _step(result, 'cross_compile', 'ok', 'handled by workspace_setup_d')
 
