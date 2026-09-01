@@ -181,6 +181,8 @@ Then review contextually:
 Use this baseline unless user asks otherwise:
 
 ```cmake
+cmake_minimum_required(VERSION 3.8.2)
+
 set(TEST_TARGET qimsdk-cpp-<appname>)
 
 add_executable(${TEST_TARGET}
@@ -204,6 +206,7 @@ Avoid mandatory `find_package(PkgConfig REQUIRED)` and `pkg_check_modules(...)` 
 
 ## CMake Sanity Checks
 
+- Keep `cmake_minimum_required(VERSION 3.8.2)` as the first line — required for a successful build.
 - Keep `main.cc` listed in `add_executable(${TEST_TARGET} ...)`.
 - Keep `qimsdk-app-builder` in `target_link_libraries(${TEST_TARGET} PRIVATE ...)`.
 - Ensure `${QIMSDK_BINDIR}` is defined by the parent build; if not, document it in `README.md` as a build prerequisite.
