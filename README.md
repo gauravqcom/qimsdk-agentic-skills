@@ -1,8 +1,8 @@
 # qimsdk-agentic-skills
 
-Agentic skills for QIMSDK development workflows.
+Agentic skills for QIM SDK development workflows.
 
-This repository packages QIMSDK-focused skills for coding agents. The repo keeps
+This repository packages QIM SDK-focused skills for coding agents. The repo keeps
 runtime skill payloads, sample prompts, and skill metadata in separate top-level
 areas.
 
@@ -10,10 +10,10 @@ areas.
 
 Use this repo to maintain skills for:
 
-- QIMSDK GStreamer application generation.
-- QIMSDK C++ application generation.
-- QIMSDK Python application generation.
-- QIMSDK deployment workflows.
+- QIM SDK GStreamer application generation.
+- QIM SDK C++ application generation.
+- QIM SDK Python application generation.
+- QIM SDK deployment workflows.
 
 The skill payloads live directly under `skills/`.
 
