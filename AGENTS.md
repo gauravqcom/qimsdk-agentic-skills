@@ -1,4 +1,4 @@
-# QIMSDK Agentic Skills Contributor Rules
+# QIM SDK Agentic Skills Contributor Rules
 
 This repository contains portable skill bundles for coding agents.
 
