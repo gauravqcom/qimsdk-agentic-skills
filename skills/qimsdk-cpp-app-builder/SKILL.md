@@ -103,7 +103,7 @@ Use this skill when the user asks for C++ application development with the QIM S
 - HRNet and other documented top-down pose models can run either directly on full frames (simpler, one stage) or on a detector-cropped ROI (an extra stage, sharper keypoints when the subject is small/distant). Build the topology the request actually describes — do not silently drop or silently add the stage-1 detector. If the request is ambiguous about whether ROI cropping is wanted, prefer the full-frame single-stage form as the default (fewer moving parts) and ask only if accuracy on small/distant subjects is explicitly a concern. When building the two-stage cascade, use stage-1 person/foot detection with `image-batch-non-cumulative`, merge its metadata, then stage-2 `roi-batch-cumulative` HRNet with a second metadata merge before overlay; settings and results are mandatory for both stages in that case. `lite-3dmm` (face-recognition stage 2) needs `/etc/data/{blendShape,meanFace,shapeBasis}.bin` on the device — note that prerequisite in the README. See `references/model-catalog.md`.
 - For two-stage discrete daisy-chain AI with overlay of both stage outputs, do not generate a single linear `postprocess -> TextFilter -> qtimetamux -> qtivoverlay` chain. Use two tee/mux stages: split before stage 1, merge stage-1 metadata with `qtimetamux`, split the merged stream before stage 2, merge stage-2 metadata with a second `qtimetamux`, then overlay.
 - For display, default `waylandsink fullscreen=true sync=true` for every source type, including live camera sources (`qticamsrc`, `qtiqmmfsrc`, `v4l2src`) — camera source type alone is not a reason to use `sync=false`. Use `sync=false` only for: (1) more than 8 independent concurrently active input streams AND a processing-heavy topology (shared/batched inference, or a large composer grid where HTP/batch preroll makes frames arrive well behind their PTS) — a 4-stream AI wall, a simple multi-stream playback grid, or a batch group of 8 or fewer streams stays `sync=true`; (2) display sharing a tee/composer source with a parallel encode/file/metadata sink that can stall the display clock (stream-count-independent, pair with `enable-last-sample=false` when it is also a multi-sink camera pipeline); (3) the user explicitly requests lower latency over A/V sync. Audio-classification display pipelines omit the `sync` property entirely. See `references/pipeline-construction.md` "Display Sink Sync Policy" for the full canonical statement.
-- For any app that uses `pulsesrc` or `pulsesink`, include the PulseAudio prerequisite in the response and in README `Steps to Run on QLI`: `wpctl status`, then `wpctl set-default <node_no.>`. Do not invent a default node number; `<node_no.>` is device-specific.
+- For any app that uses `pulsesrc` or `pulsesink`, include the PulseAudio prerequisite in the response and in README `Steps to Run`: `wpctl status`, then `wpctl set-default <node_no.>`. Do not invent a default node number; `<node_no.>` is device-specific.
 - For single-input pipelines, use minimal queue placement; avoid inserting queue between every stage unless needed for tee branches or explicit decoupling.
 - Reject redundant queues (for example adjacent queue stages with no clear reason).
 - Default runtime pattern is `pipeline.execute()` unless the user explicitly asks for manual lifecycle.
@@ -146,7 +146,7 @@ After generation, list all placeholders in README so none are missed.
    If the request names a known model display name or `.tflite` filename, also load `references/model-catalog.md`.
 3. For any C++ app generation request, load `references/example-retrieval.md` and run `rank_examples.py` to ground the draft in known-good examples — this adds context alongside the rest of this workflow, it does not replace step 2's reference loading or steps 4-5. **Finding a retrieval match does not skip or shorten any subsequent step — all of steps 4-5 run unconditionally regardless of what retrieval returns or whether a file was leveraged.** Skip this step for plugin-only lookups.
 4. Generate filesystem artifacts (folder + source + README).
-5. Include `Pipeline Flow` with `Text Summary` and `Mermaid Diagram` subsections, plus `Steps to Run on QLI`, in README from actual code wiring.
+5. Include `Pipeline Flow` with `Text Summary` and `Mermaid Diagram` subsections, plus `Steps to Run`, in README from actual code wiring.
 6. Validate API usage against `references/api-surface.md` and `references/sdk-architecture.md`.
 
 ## Request Matching
@@ -185,7 +185,7 @@ After generation, list all placeholders in README so none are missed.
   - `Pipeline Flow` mapped from actual code, with `Text Summary` and `Mermaid Diagram` subsections
   - required placeholders to fill
   - `Steps to Compile`: exactly the line `Yocto: https://imsdkdocs.qualcomm.com/advanced/yocto-build#steps-to-build-custom-application` — no other compile instructions
-  - `Steps to Run on QLI`
+  - `Steps to Run`
 
 ## Completion Checklist
 
@@ -194,7 +194,7 @@ After generation, list all placeholders in README so none are missed.
 3. Element names in `.add(...)` and `.link(...)` are consistent.
 4. Any callback signatures match SDK typedefs.
 5. README `Text Summary` and `Mermaid Diagram` match actual code paths.
-6. README includes `Steps to Compile` (the Yocto build link only) and clear `Steps to Run on QLI`.
+6. README includes `Steps to Compile` (the Yocto build link only) and clear `Steps to Run`.
 7. No references to sources outside this skill folder.
 8. User-specified values are preserved in code instead of being replaced with placeholders.
 9. Display output defaults to `waylandsink fullscreen=true sync=true` for every source type including live camera sources; `sync=false` is used only for the three documented exceptions (>8-stream processing-heavy topology, multi-sink clock-stall, or explicit user low-latency request), and audio-classification pipelines omit `sync` entirely.

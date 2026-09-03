@@ -64,6 +64,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 # ── Device path constants ──────────────────────────────────────────────────────
 _SAMPLE_APPS_SUBDIR = 'gst-sample-apps'
 _INSTALL_BINDIR     = '/usr/bin'
+_GST_SUBDIR         = 'gstreamer'  # qimsdk repo: gst-sample-apps lives under gstreamer/, not repo root
 # Output dir is derived from the artifact's parsed output_path at deploy time.
 # This fallback is used only when no output path is found in the artifact README.
 _OUTPUT_MEDIA_DIR   = '/root/Downloads/qimsdk_samples/media/output'
@@ -456,7 +457,7 @@ class _SSH_Key:
 
 # ── Artifact metadata parsing ─────────────────────────────────────────────────
 
-def _parse_artifact(artifact_path):
+def _parse_artifact(artifact_path, device_user=None):
     """
     Parse CMakeLists.txt and README.md from artifact folder locally.
     Returns dict with: binary_name, source_type, output_path, output_paths, rtsp_out.
@@ -514,6 +515,7 @@ def _parse_artifact(artifact_path):
             source_type = 'camera'
 
         if not output_paths:
+            # Absolute-path form first ('/root/...', '/home/user/...', '/tmp/...').
             m_out = re.search(
                 r'(?:OUTPUT_FILE[^|]*\|[^|`/]*|output[\w\s]*[|:]\s*|location\s*=\s*)'
                 r'[`\s]*(/(?:root|home/\w+|tmp)/[^\s`|<>\'\"\\]+)',
@@ -522,6 +524,23 @@ def _parse_artifact(artifact_path):
             )
             if m_out:
                 output_paths.append(m_out.group(1).strip())
+            else:
+                # $HOME-relative form (main.c's filesink location is set via a C
+                # variable, not an inline literal, so the main.c regex above never
+                # matches — this is the only place the real path is documented).
+                # Anchored to the OUTPUT_FILE row specifically — an unanchored
+                # $HOME/... search would match INPUT_FILE/MODEL_PATH/LABELS_PATH
+                # rows first, since $HOME-relative paths are used for all of them.
+                # Resolve $HOME using device_user, same convention as C source:
+                # root -> /root, otherwise -> /home/{user}.
+                m_home = re.search(
+                    r'OUTPUT_FILE[^|]*\|[^|`/]*\|[`\s]*\$HOME(/[^\s`|<>\'\"\\]+)',
+                    readme,
+                    re.IGNORECASE
+                )
+                if m_home and device_user:
+                    home_dir = '/root' if device_user == 'root' else f'/home/{device_user}'
+                    output_paths.append(f'{home_dir}{m_home.group(1).strip()}')
 
     output_path = output_paths[0] if output_paths else None
 
@@ -743,7 +762,7 @@ def deploy_mode_c(
 
     sdk_path / imsdk_path (both optional, from LINUX_WORKSTATION_SDK_PATH /
     LINUX_WORKSTATION_IMSDK_PATH in configs/.env) let the caller point at an
-    SDK installer or an existing gst-plugins-imsdk clone already present on
+    SDK installer or an existing qimsdk clone already present on
     the workstation, instead of downloading/cloning fresh. See
     workspace_setup_c.setup_and_build_c for the exact precedence rules.
 
@@ -800,7 +819,7 @@ def deploy_mode_c(
     try:
         # ── C0: Parse artifact metadata locally (no SSH yet) ──────────────────
         try:
-            meta = _parse_artifact(artifact_path)
+            meta = _parse_artifact(artifact_path, device_user=ssh_cfg.get('user'))
         except Exception as e:
             result['failure_reason'] = f'Artifact parse error: {e}'
             _step(result, 'parse_artifact', 'fail', str(e))
@@ -891,7 +910,7 @@ def deploy_mode_c(
             _step(result, 'cross_compile', 'ok', 'handled by workspace_setup_c')
 
             # ── C6: Pull binary from Linux workstation to local ───────────────────────────
-            remote_bin_path = f'{imsdk_dir}/build/{_SAMPLE_APPS_SUBDIR}/{binary_name}/{binary_name}'
+            remote_bin_path = f'{imsdk_dir}/{_GST_SUBDIR}/build/{_SAMPLE_APPS_SUBDIR}/{binary_name}/{binary_name}'
             print(f'  [C6]    Pulling binary from Linux workstation: {remote_bin_path}', flush=True)
 
             # Staging dir for the pulled binary. On Windows, use a short absolute path to
@@ -1318,7 +1337,7 @@ def main():
                         'If not set, downloaded from codelinaro.org (LINUX_WORKSTATION_SDK_PATH)')
     p.add_argument('--linux-workstation-imsdk-path',
                    default=os.environ.get('LINUX_WORKSTATION_IMSDK_PATH', ''),
-                   help='Optional: path on the workstation to an existing gst-plugins-imsdk clone. '
+                   help='Optional: path on the workstation to an existing qimsdk clone. '
                         'If not set, cloned from GitHub (LINUX_WORKSTATION_IMSDK_PATH)')
     p.add_argument('--linux-workstation-port',
                    default=int(os.environ.get('LINUX_WORKSTATION_PORT', '22') or '22'),

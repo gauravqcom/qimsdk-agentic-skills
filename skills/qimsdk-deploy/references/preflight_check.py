@@ -42,7 +42,7 @@ Mode C additional:
   LINUX_WORKSTATION_HOST=<linux-workstation-hostname>
   LINUX_WORKSTATION_USER=<username>
   LINUX_WORKSTATION_KEY=~/.ssh/id_ed25519_workstation
-  LINUX_WORKSTATION_BUILD_DIR=<path-to-build-dir>  (environment-setup-armv8a-qcom-linux must be at {BUILD_DIR}/images/qcom-armv8a/sdk/ and gst-plugins-imsdk must be at {BUILD_DIR}/gst-plugins-imsdk/)
+  LINUX_WORKSTATION_BUILD_DIR=<path-to-build-dir>  (Yocto SDK env script must be at {BUILD_DIR}/qcom-sdk/environment-setup-*-qcom-linux and qimsdk must be at {BUILD_DIR}/qimsdk/)
 
 ── Behavior on failure ───────────────────────────────────────────────────────────
 
@@ -125,12 +125,11 @@ def indent(msg): return f'       {msg}'
 # ── Python version ────────────────────────────────────────────────────────────
 
 def check_host_platform():
-    """Verify the host machine is Windows (deploy scripts tested on Windows)."""
+    """Verify the host machine can run deploy. Deploy scripts use paramiko for
+    all SSH/SCP, which is cross-platform, so Linux/macOS hosts are supported —
+    they're just less exercised than Windows in practice."""
     if sys.platform != 'win32':
-        return False, (
-            f'Host platform is {sys.platform!r} — deploy scripts are tested on Windows. '
-            'Run on a Windows machine.'
-        )
+        return True, f'{sys.platform} host — supported via paramiko (less tested than Windows)'
     return True, 'Windows host confirmed'
 
 
@@ -308,16 +307,18 @@ def check_local_output_dir(output_dir, repo_root=None):
 
 
 def check_local_tmp_writable():
-    """Mode C (Windows): verify C:/tmp/ is writable for pscp long-path workaround."""
-    tmp = pathlib.Path('C:/tmp/qimsdk_preflight_test')
+    """Mode C/D: verify the local staging dir for pulled binaries is writable —
+    C:/tmp/ on Windows (pscp long-path workaround), /tmp/ elsewhere."""
+    local_tmp = 'C:/tmp' if sys.platform == 'win32' else '/tmp'
+    tmp = pathlib.Path(f'{local_tmp}/qimsdk_preflight_test')
     try:
         tmp.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text('test', encoding='utf-8')
         tmp.unlink()
-        return True, 'C:/tmp/ is writable (pscp long-path workaround will work)'
+        return True, f'{local_tmp}/ is writable'
     except Exception as e:
         return False, (
-            f'C:/tmp/ is not writable: {e}.'
+            f'{local_tmp}/ is not writable: {e}.'
         )
 
 
@@ -846,8 +847,8 @@ def check_sdk_env(host, user, key_path, build_dir, password=None, timeout=15, po
     """
     Verify SDK env script exists in build_dir and compiler works.
 
-    The SDK env script is always named environment-setup-armv8a-qcom-linux
-    after the standard install — no config needed for the script name.
+    The env-setup script name is version-specific (e.g.
+    environment-setup-armv8-2a-qcom-linux), so it is discovered by glob.
     """
     try:
         import paramiko
@@ -859,10 +860,12 @@ def check_sdk_env(host, user, key_path, build_dir, password=None, timeout=15, po
         return False, f'Could not connect to Linux workstation to check SDK: {err}'
 
     try:
-        env_script = f'{build_dir}/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux'
+        sdk_dir = f'{build_dir}/qcom-sdk'
+        env_script = _ssh_run(
+            client, f'ls {sdk_dir}/environment-setup-*-qcom-linux 2>/dev/null | head -1'
+        ).strip()
 
-        found = _ssh_run(client, f'test -f {env_script} && echo FOUND || echo NOT_FOUND')
-        if found != 'FOUND':
+        if not env_script:
             # SDK isn't at the configured path — before concluding it needs
             # provisioning, check common alternate mount points on the same
             # workstation. Misconfigured LINUX_WORKSTATION_BUILD_DIR (e.g.
@@ -877,24 +880,23 @@ def check_sdk_env(host, user, key_path, build_dir, password=None, timeout=15, po
             ]
             found_elsewhere = []
             for cand in candidates:
-                if cand == build_dir:
+                cand_sdk_dir = f'{cand}/qcom-sdk'
+                if cand_sdk_dir == sdk_dir:
                     continue
-                probe = _ssh_run(
-                    client,
-                    f'test -f {cand}/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux '
-                    f'&& echo FOUND || echo NOT_FOUND'
-                )
-                if probe == 'FOUND':
+                probe_script = _ssh_run(
+                    client, f'ls {cand_sdk_dir}/environment-setup-*-qcom-linux 2>/dev/null | head -1'
+                ).strip()
+                if probe_script:
                     found_elsewhere.append(cand)
             if found_elsewhere:
                 return False, (
-                    f'SDK env script not found at {env_script}, but a valid SDK IS installed at: '
-                    f'{", ".join(found_elsewhere)}. LINUX_WORKSTATION_BUILD_DIR is very likely '
+                    f'SDK env script not found under {sdk_dir}, but a valid SDK IS installed under: '
+                    f'{", ".join(f"{c}/qcom-sdk" for c in found_elsewhere)}. LINUX_WORKSTATION_BUILD_DIR is very likely '
                     f'misconfigured — update configs/.env to point there instead of triggering an '
                     f'unnecessary re-download.'
                 )
             return False, (
-                f'SDK env script not found at {env_script}.'
+                f'SDK env script not found under {sdk_dir}.'
             )
 
         out = _ssh_run(
@@ -973,7 +975,7 @@ def check_qimsdk_sdk_env(host, user, key_path, build_dir, password=None, timeout
             client,
             f"bash -c '. {env_script} && "
             f'echo CXX=$CXX && '
-            f'"$CXX" --version 2>&1 | head -1 && '
+            f'$CXX --version 2>&1 | head -1 && '
             f'echo SYSROOT=$SDKTARGETSYSROOT && '
             f'ls "$SDKTARGETSYSROOT"/usr/lib/libqimsdk-app-builder.so* 2>/dev/null | head -1 && '
             f'(find "$SDKTARGETSYSROOT" -name qimsdk.h 2>/dev/null | head -1)\'',
@@ -1043,7 +1045,7 @@ def check_linux_workstation_disk(host, user, key_path, build_dir=None, password=
 
 
 def check_linux_workstation_imsdk_dir(host, user, key_path, imsdk_dir, password=None, timeout=10, port=22):
-    """Verify gst-plugins-imsdk exists at imsdk_dir and ls gst-sample-apps."""
+    """Verify qimsdk exists at imsdk_dir and ls gstreamer/gst-sample-apps."""
     try:
         import paramiko
     except ImportError:
@@ -1056,14 +1058,14 @@ def check_linux_workstation_imsdk_dir(host, user, key_path, imsdk_dir, password=
     try:
         exists = _ssh_run(
             client,
-            f'test -d {imsdk_dir}/gst-sample-apps && echo EXISTS || echo NOT_EXISTS'
+            f'test -d {imsdk_dir}/gstreamer/gst-sample-apps && echo EXISTS || echo NOT_EXISTS'
         )
         if exists != 'EXISTS':
             return False, (
-                f'gst-plugins-imsdk not found at {imsdk_dir} (missing gst-sample-apps/).'
+                f'qimsdk not found at {imsdk_dir} (missing gstreamer/gst-sample-apps/).'
             )
-        ls_out = _ssh_run(client, f'ls {imsdk_dir}/gst-sample-apps 2>&1 | head -5')
-        return True, f'{imsdk_dir}/gst-sample-apps/ found:\n       {ls_out.replace(chr(10), chr(10) + "       ")}'
+        ls_out = _ssh_run(client, f'ls {imsdk_dir}/gstreamer/gst-sample-apps 2>&1 | head -5')
+        return True, f'{imsdk_dir}/gstreamer/gst-sample-apps/ found:\n       {ls_out.replace(chr(10), chr(10) + "       ")}'
     finally:
         client.close()
 
@@ -1171,8 +1173,8 @@ def run(mode, device_ip, device_user, host_key,
         all_ok = False
         stop()
 
-    # ── 5. Local C:/tmp/ writable (Mode C/D, Windows) ────────────────────────
-    if mode in ('C', 'D') and sys.platform == 'win32':
+    # ── 5. Local staging dir writable (Mode C/D — C:/tmp/ on Windows, /tmp/ elsewhere) ──
+    if mode in ('C', 'D'):
         tmp_ok, tmp_msg = check_local_tmp_writable()
         add(ok(tmp_msg) if tmp_ok else fail(tmp_msg))
         if not tmp_ok:
@@ -1592,7 +1594,7 @@ def run(mode, device_ip, device_user, host_key,
 
                     # imsdk_dir: LINUX_WORKSTATION_IMSDK_PATH overrides the derived default
                     derived_imsdk = linux_workstation_imsdk_path.rstrip('/') if linux_workstation_imsdk_path \
-                        else (f'{linux_workstation_build_dir}/gst-plugins-imsdk' if linux_workstation_build_dir else None)
+                        else (f'{linux_workstation_build_dir}/qimsdk' if linux_workstation_build_dir else None)
                     if derived_imsdk:
                         imsdk_ok, imsdk_msg = check_linux_workstation_imsdk_dir(
                             linux_workstation_host, linux_workstation_user, linux_workstation_key_path,
@@ -1731,7 +1733,7 @@ if __name__ == '__main__':
                         help='Mode C/D: build/workspace dir on the workstation (LINUX_WORKSTATION_BUILD_DIR)')
     parser.add_argument('--linux-workstation-imsdk-path',
                         default=os.environ.get('LINUX_WORKSTATION_IMSDK_PATH', ''),
-                        help='Mode C: path on the workstation to an existing gst-plugins-imsdk clone '
+                        help='Mode C: path on the workstation to an existing qimsdk clone '
                              '(LINUX_WORKSTATION_IMSDK_PATH). If unset, checks the default derived location.')
     parser.add_argument('--linux-workstation-sdk-path',
                         default=os.environ.get('LINUX_WORKSTATION_SDK_PATH', ''),

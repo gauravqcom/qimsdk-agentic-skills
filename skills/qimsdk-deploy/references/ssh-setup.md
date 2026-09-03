@@ -238,7 +238,7 @@ After this, run preflight for Mode C — it will verify the SSH connection and r
 **What the skill handles automatically (no user action needed):**
 - `unzip` not installed → auto-installs via `sudo apt-get install -y unzip`
 - `cmake` not installed → auto-installs via `sudo apt-get install -y cmake`
-- Detects WSL is `aarch64` → downloads `arm-qli-2.0-standardsdk.zip` (not the x86_64 zip)
+- Detects WSL is `aarch64` → downloads `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (not the x86_64 zip)
 
 **What the skill does NOT handle (WSL user setup — do before running preflight):**
 - WSL installation

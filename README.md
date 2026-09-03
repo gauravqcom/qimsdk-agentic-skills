@@ -82,6 +82,11 @@ The currently populated prompt sets are:
 - `qimsdk-cpp-app-builder/`: C++ app-builder prompts.
 - `qimsdk-python-app-builder/`: Python app-builder prompts.
 
+## Resources
+
+- To learn more about QIM SDK, visit the [official documentation](https://imsdkdocs.qualcomm.com).
+- [QIM SDK Coding Agent](https://imsdkdocs.qualcomm.com/app-builder-coding-agent)
+
 ## Contributing
 
 Read `AGENTS.md` before making structural changes. It defines the repository

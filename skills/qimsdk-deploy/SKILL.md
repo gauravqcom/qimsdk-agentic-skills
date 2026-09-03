@@ -1,6 +1,6 @@
 ---
 name: qimsdk-deploy
-description: "Deploy, build, run, and retrieve QIM SDK GStreamer C apps, gst-launch pipelines, QIM SDK C++ apps, and Python qimsdk apps on Qualcomm Linux devices. Five modes: Mode A (gst-launch — push and run directly, no build), Mode B (Ubuntu on-device build — QIMSDK source tree on device), Mode C (host build — gstreamer-app-builder C sample app, build on a Linux workstation (x86_64 or aarch64, arch auto-detected) using the host SDK, deploy to QLI device), Mode P (Python qimsdk app — push main.py and run, no build), Mode D (host build — cpp-app-builder C++ SDK app, standalone build against the Yocto SDK on a Linux x86_64/WSL workstation, deploy to QLI device). Returns structured result for eval scoring."
+description: "Deploy, build, run, and retrieve QIM SDK GStreamer C apps, gst-launch pipelines, QIM SDK C++ apps, and Python qimsdk apps on Qualcomm Linux devices. Five modes: Mode A (gst-launch — push and run directly, no build), Mode B (Ubuntu on-device build — QIMSDK source tree on device), Mode C (host build — gstreamer-app-builder C sample app, build on a Linux workstation (x86_64 or aarch64, arch auto-detected) using the host SDK, deploy to QLI device), Mode P (Python qimsdk app — push main.py and run, no build), Mode D (host build — cpp-app-builder C++ SDK app, standalone build against the Yocto SDK on a Linux workstation (x86_64 or aarch64, arch auto-detected), deploy to QLI device). Returns structured result for eval scoring."
 ---
 
 # QIM SDK Deploy Skill
@@ -86,9 +86,9 @@ Mode C requires on linux workstation:
 
 Note: Mode C deploy auto-provisions the workspace from scratch (SDK download+install, git clone,
 cmake configure, host-build) if not already set up. The SDK zip
-(`x86-qli-2.0-standardsdk.zip` for x86_64 hosts) is downloaded from codelinaro.org if absent.
+(`x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts) is downloaded from codelinaro.org if absent.
 If the download fails (network blocked), place the zip manually at
-`{LINUX_WORKSTATION_BUILD_DIR}/x86-qli-2.0-standardsdk.zip` and re-run.
+`{LINUX_WORKSTATION_BUILD_DIR}/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` and re-run.
 
 Mode P requires on device:
 - `python3` installed
@@ -112,7 +112,8 @@ Mode D requires on device:
 Note: Mode D deploy auto-provisions the Yocto SDK (unzip + run the installer into
 `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk`) if not already installed, then builds each app
 **standalone** (out of tree) against the installed SDK's target sysroot — no shared source tree
-is cloned or mutated, unlike Mode C. See "Mode D — C++ Standalone Host Build" below.
+is cloned or mutated, unlike Mode C. Workstation arch (x86_64 or aarch64) is auto-detected,
+same as Mode C. See "Mode D — C++ Standalone Host Build" below.
 
 **Preflight failure means deploy will fail.** Every [FAIL] in preflight output must be resolved before running deploy. Do not proceed with deploy if preflight exits non-zero.
 
@@ -264,48 +265,54 @@ When `configs/.env` does not exist, or when required keys for the selected mode 
 | `LINUX_WORKSTATION_PORT` | SSH port on the linux workstation | Standard Linux: use `22`. If you're not sure or using WSL, run on the machine: `grep -E '^Port' /etc/ssh/sshd_config 2>/dev/null \|\| echo "22"` | `22` |
 
 > SDK install and repo clone are auto-provisioned on first deploy if not already present.
-> If internet is blocked, place the SDK zip at `{LINUX_WORKSTATION_BUILD_DIR}/sdk.zip` (simplest) or use the arch-specific name: `x86-qli-2.0-standardsdk.zip` (x86_64) or `arm-qli-2.0-standardsdk.zip` (aarch64/WSL on ARM). The script checks for all three.
+> If internet is blocked, place the SDK zip at `{LINUX_WORKSTATION_BUILD_DIR}/sdk.zip` (simplest) or use the arch-specific name: `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (x86_64) or `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (aarch64/WSL on ARM). The script checks for all three.
 
 All Mode C keys above are required. Preflight exits immediately with `[FAIL]` if any are missing.
 
 **Mode C — optional, bring-your-own SDK/repo:**
 | Key | What it is | Example |
 |-----|-----------|---------|
-| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to an SDK installer — a `.zip` (unzipped automatically to find the installer inside) or a `.sh` (already extracted, run directly). Only consulted when the SDK is not yet installed; ignored otherwise. If not set, falls back to the existing zip-lookup + codelinaro.org download. | `/local/mnt/sdk/x86-qli-2.0-standardsdk.zip` or `/home/user/sdk-installer.sh` |
-| `LINUX_WORKSTATION_IMSDK_PATH` | Absolute path **on the workstation** to an already-cloned `gst-plugins-imsdk` repo. When set, this path is used directly and the git clone step is skipped entirely. If the path is set but `CMakeLists.txt` is not found there, deploy fails with a clear message — it never silently falls back to cloning a fresh copy. If not set, falls back to cloning from GitHub into `{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`. | `/local/mnt/repos/gst-plugins-imsdk` |
+| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to an SDK installer — a `.zip` (unzipped automatically to find the installer inside) or a `.sh` (already extracted, run directly). Only consulted when the SDK is not yet installed; ignored otherwise. If not set, falls back to the existing zip-lookup + codelinaro.org download. | `/local/mnt/sdk/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` or `/home/user/sdk-installer.sh` |
+| `LINUX_WORKSTATION_IMSDK_PATH` | Absolute path **on the workstation** to an already-cloned `qimsdk` repo. When set, this path is used directly and the git clone step is skipped entirely. If the path is set but `CMakeLists.txt` is not found there, deploy fails with a clear message — it never silently falls back to cloning a fresh copy. If not set, falls back to cloning from GitHub into `{LINUX_WORKSTATION_BUILD_DIR}/qimsdk`. | `/local/mnt/repos/qimsdk` |
 
 **Ask the user during the Mode C wizard, right after `LINUX_WORKSTATION_BUILD_DIR`:**
 1. "Do you have the SDK installer already on the workstation (as a `.zip` or `.sh`)?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_SDK_PATH`
    — if no: nothing to do; SDK downloads automatically on first deploy
-2. "Do you have `gst-plugins-imsdk` already cloned on the workstation?"
+2. "Do you have `qimsdk` already cloned on the workstation?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_IMSDK_PATH`
    — if no: nothing to do; repo clones automatically on first deploy
 
 **Mode D — adds (same LINUX_WORKSTATION_* keys as Mode C, no new required keys):**
 
 Mode D reuses every `LINUX_WORKSTATION_HOST/USER/KEY/PASSWORD/PORT/BUILD_DIR` key above — it targets
-the same class of Linux x86_64/WSL workstation, just with a different SDK (the Yocto standard SDK,
-not gst-plugins-imsdk). Optional additions:
+the same class of Linux workstation as Mode C (x86_64 or aarch64 — arch is auto-detected), just
+with a different SDK (the Yocto standard SDK, not qimsdk). Optional additions:
 
 | Key | What it is | How to find it | Example |
 |-----|-----------|---------------|---------|
-| `LINUX_WORKSTATION_SDK_URL` | Source for the Yocto SDK zip (installer .sh inside) | A `file://` path to a network share, or an `http(s)://` URL | `file:///mnt/share/qcom-yocto-sdk-deploy.zip` |
-| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to a Yocto SDK installer already present — a `.zip` (unzipped automatically to find the `.sh` installer inside) or a `.sh` (already extracted, run directly). Takes precedence over the build-dir zip lookup and `LINUX_WORKSTATION_SDK_URL`. Only consulted when the SDK is not yet installed; ignored otherwise. **Same key as Mode C** — set once, works for both modes. | `/local/mnt/sdk/qcom-yocto-sdk-deploy.zip` or `/local/mnt/sdk/installer.sh` |
+| `LINUX_WORKSTATION_SDK_URL` | Source for the Yocto SDK zip (installer .sh inside) | A `file://` path to a network share, or an `http(s)://` URL | `file:///mnt/share/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` |
+| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to a Yocto SDK installer already present — a `.zip` (unzipped automatically to find the `.sh` installer inside) or a `.sh` (already extracted, run directly). Takes precedence over the build-dir zip lookup and `LINUX_WORKSTATION_SDK_URL`. Only consulted when the SDK is not yet installed; ignored otherwise. **Same key as Mode C** — set once, works for both modes. | `/local/mnt/sdk/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` or `/local/mnt/sdk/installer.sh` |
 
-> If a `qcom-yocto-sdk*.zip` (or `sdk.zip`) is already present in `LINUX_WORKSTATION_BUILD_DIR`,
-> neither `LINUX_WORKSTATION_SDK_PATH` nor `LINUX_WORKSTATION_SDK_URL` is needed — deploy uses the
-> local zip. The SDK is installed once into `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reused for
-> every app. SDK source precedence: `LINUX_WORKSTATION_SDK_PATH` → build-dir zip → `LINUX_WORKSTATION_SDK_URL`
-> → default Artifactory zip:
-> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-armv8a/qcom-yocto-sdk-deploy-0807.zip`.
+> If a `qcom-yocto-sdk*.zip`, `sdk.zip`, or the arch-specific zip name (see below) is already
+> present in `LINUX_WORKSTATION_BUILD_DIR`, neither `LINUX_WORKSTATION_SDK_PATH` nor
+> `LINUX_WORKSTATION_SDK_URL` is needed — deploy uses the local zip. The SDK is installed once into
+> `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reused for every app. SDK source precedence:
+> `LINUX_WORKSTATION_SDK_PATH` → build-dir zip → `LINUX_WORKSTATION_SDK_URL` → default Artifactory
+> zip for the detected workstation arch (via `uname -m`, same as Mode C):
+> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+> (x86_64) or
+> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+> (aarch64).
 
 **Ask the user during the Mode D wizard, right after `LINUX_WORKSTATION_BUILD_DIR`:**
 1. "Do you have the Yocto SDK installer already on the workstation (as a `.zip` or `.sh`)?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_SDK_PATH`
-   — if no: deploy will download the default `qcom-yocto-sdk-deploy-0807.zip`
-     from the Artifactory URL on first deploy. If you need a different source,
-     set `LINUX_WORKSTATION_SDK_URL` to a `file://` path or `http(s)://` URL.
+   — if no: deploy will detect the workstation arch (`uname -m`) and download the matching
+     default Yocto SDK zip (`x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 or
+     `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64) from the Artifactory URL on first
+     deploy. If you need a different source, set `LINUX_WORKSTATION_SDK_URL` to a `file://` path
+     or `http(s)://` URL.
    (Mode D has no repo-clone step, so there is no `IMSDK_PATH` question — unlike Mode C.)
 
 **Mode P — same as Mode A (no extra keys needed):**
@@ -409,12 +416,12 @@ distinct choice, not to be merged or abbreviated when relaying to the user:**
 - **Mode A** — artifact is a `pipeline.sh` (gst-launch command). No build needed.
 - **Mode B** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is Ubuntu with QIMSDK source tree on-device.
 - **Mode C** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is QLI 2.0 / host build (no build tools). Needs a Linux workstation (x86_64 or aarch64 — arch is auto-detected; WSL on either Windows x86_64 or Windows ARM works).
-- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/qimsdk.h>` (cpp-app-builder). Needs a Linux x86_64/WSL workstation (no arch auto-detection — the Yocto SDK zip in use is x86_64-only).
+- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/qimsdk.h>` (cpp-app-builder). Needs a Linux workstation (x86_64 or aarch64 — arch is auto-detected; WSL on either Windows x86_64 or Windows ARM works).
 - **Mode P** — artifact has `main.py` (or legacy `app.py`) using `qimsdk.Pipeline`. No build.
 
 Mode C and Mode D both host-build on a workstation and push a binary to the device, but they target
 different builder contracts (gstreamer-app-builder's C sample apps vs cpp-app-builder's standalone
-C++ SDK apps) and use different toolchains (gst-plugins-imsdk source tree vs the Yocto standard SDK)
+C++ SDK apps) and use different toolchains (qimsdk source tree vs the Yocto standard SDK)
 — check `main.c`+`GST_EXAMPLE_BIN` (Mode C) vs `main.cc`+`TEST_TARGET` (Mode D) in the artifact.
 
 ### Step 1 — Read `configs/.env` for the selected mode
@@ -449,7 +456,7 @@ After collecting `LINUX_WORKSTATION_BUILD_DIR`, always ask these questions befor
 - **No** → leave unset; SDK downloads automatically from codelinaro.org on first deploy
 
 **Mode C — repo question (ask exactly this):**
-> "Do you have `gst-plugins-imsdk` already cloned on the workstation?"
+> "Do you have `qimsdk` already cloned on the workstation?"
 - **Yes** → "What is the full path to it on the workstation?" → set `LINUX_WORKSTATION_IMSDK_PATH`
 - **No** → leave unset; repo clones automatically from GitHub on first deploy
 
@@ -782,23 +789,23 @@ if not set in `.env`. Set it to override or speed up detection.
 
 | State | Indicator | Action taken |
 |-------|-----------|--------------|
-| 0 — no SDK | `images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux` absent | unzip `x86-qli-2.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
-| 1 — SDK installed | `gst-plugins-imsdk/CMakeLists.txt` absent | `git clone https://github.com/qualcomm/gst-plugins-imsdk.git` |
-| 2 — repo cloned | `gst-plugins-imsdk/build/Makefile` absent | cmake configure with host SDK toolchain |
-| 3 — cmake configured | `build/gst-sample-apps/{binary}/{binary}` absent | push source + `cmake --build build --target {binary}` |
+| 0 — no SDK | `qcom-sdk/environment-setup-*-qcom-linux` absent | unzip `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
+| 1 — SDK installed | `qimsdk/CMakeLists.txt` absent | `git clone https://github.com/qualcomm/qimsdk.git` |
+| 2 — repo cloned | `qimsdk/gstreamer/build/Makefile` absent | build + install base libraries into SDK sysroot, then cmake configure with host SDK toolchain |
+| 3 — cmake configured | `gstreamer/build/gst-sample-apps/{binary}/{binary}` absent | push source + `cmake --build build --target {binary}` |
 | 4 — binary built | binary present | push source + incremental cmake --build (~4s) |
 
 **SDK zip lookup:** if `LINUX_WORKSTATION_SDK_PATH` is set, that path is used directly (a `.zip`
 is unzipped to find the installer; a `.sh` is run as-is). Otherwise:
-`{LINUX_WORKSTATION_BUILD_DIR}/x86-qli-2.0-standardsdk.zip` (x86_64 hosts)
-or `arm-qli-2.0-standardsdk.zip` (aarch64 hosts). Downloaded from codelinaro.org if absent.
+`{LINUX_WORKSTATION_BUILD_DIR}/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (x86_64 hosts)
+or `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (aarch64 hosts). Downloaded from codelinaro.org if absent.
 If download fails (network restricted), set `LINUX_WORKSTATION_SDK_PATH` or place the zip manually
 at that path and re-run.
 
 **Repo lookup:** if `LINUX_WORKSTATION_IMSDK_PATH` is set, that path is used directly as `imsdk_dir`
 and the clone step is skipped — deploy fails with a clear message if `CMakeLists.txt` is not found
 there rather than silently cloning a fresh copy. Otherwise cloned from GitHub into
-`{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`.
+`{LINUX_WORKSTATION_BUILD_DIR}/qimsdk`.
 
 ---
 
@@ -977,29 +984,29 @@ Store the chosen path as `LINUX_WORKSTATION_BUILD_DIR`.
 
 **C1 — Verify host SDK on linux workstation**
 
-The SDK env script is always at `{LINUX_WORKSTATION_BUILD_DIR}/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`. Check it exists at exactly that path:
+The SDK is installed under `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk/` — the env script name is version-specific (e.g. `environment-setup-armv8-2a-qcom-linux`), so discover it by glob:
 ```bash
-ssh ... "test -f <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && echo FOUND || echo NOT_FOUND"
+ssh ... "ls <LINUX_WORKSTATION_BUILD_DIR>/qcom-sdk/environment-setup-*-qcom-linux 2>/dev/null | head -1"
 ```
-- If `FOUND` → validate the compiler works:
+- If a path is returned → validate the compiler works:
   ```bash
-  ssh ... "bash -c '. <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && aarch64-qcom-linux-gcc --version 2>&1 | head -1'"
+  ssh ... "bash -c '. <env_script_path> && aarch64-qcom-linux-gcc --version 2>&1 | head -1'"
   ```
-  - If output includes `aarch64-qcom-linux-gcc` version string → SDK is functional. Set `LINUX_WORKSTATION_ENV_SETUP=<LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`.
+  - If output includes `aarch64-qcom-linux-gcc` version string → SDK is functional. Set `LINUX_WORKSTATION_ENV_SETUP=<env_script_path>`.
   - If compiler not found or errors → report to user: "SDK env script found but `aarch64-qcom-linux-gcc` is not working. The SDK installation may be incomplete. Please re-install the SDK at `<LINUX_WORKSTATION_BUILD_DIR>` and retry." **Stop.**
-- If `NOT_FOUND` → report to user: "SDK env script not found at `<LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`. Please check that the SDK installer has been run with `-d .` from the `images/qcom-armv8a/sdk/` directory inside `LINUX_WORKSTATION_BUILD_DIR` and retry." **Stop.**
+- If no path is returned → report to user: "SDK env script not found under `<LINUX_WORKSTATION_BUILD_DIR>/qcom-sdk/`. Please check that the SDK installer has been run with `-d qcom-sdk` from inside `LINUX_WORKSTATION_BUILD_DIR` and retry." **Stop.**
 
 > **Note:** The skill does not install the host SDK automatically. SDK setup is a one-time operation requiring ~5GB disk space; it must be done by the user before the first Mode C build.
 
-**C2 — Verify gst-plugins-imsdk on linux workstation**
+**C2 — Verify qimsdk on linux workstation**
 
-`gst-plugins-imsdk` is always expected at `{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`. The deploy script checks this path and fails immediately if it is not found:
+`qimsdk` is always expected at `{LINUX_WORKSTATION_BUILD_DIR}/qimsdk` (its `gst-sample-apps`/`gst-plugin-*` etc. live under a `gstreamer/` subdir). The deploy script checks this path and fails immediately if it is not found:
 ```bash
-ssh ... "test -d <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps && echo EXISTS || echo NOT_EXISTS"
+ssh ... "test -d <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps && echo EXISTS || echo NOT_EXISTS"
 ```
 If `NOT_EXISTS` → clone it first:
 ```bash
-ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR> && cd <LINUX_WORKSTATION_BUILD_DIR> && git clone https://github.com/qualcomm/gst-plugins-imsdk.git"
+ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR> && cd <LINUX_WORKSTATION_BUILD_DIR> && git clone https://github.com/qualcomm/qimsdk.git"
 ```
 
 ---
@@ -1015,29 +1022,35 @@ The binary name already has the `gst-qimsdk-` prefix (e.g. `gst-qimsdk-object-de
 
 Use the binary name from CMakeLists.txt as the directory name directly.
 
-> ⚠️ **Do NOT add `add_subdirectory()` to the parent CMakeLists.txt** — `gst-plugins-imsdk/gst-sample-apps/CMakeLists.txt` contains a `foreach(dir)` loop that automatically includes ALL subdirectories. Just creating the directory is sufficient. Adding an explicit entry causes a cmake conflict.
+> ⚠️ **Do NOT add `add_subdirectory()` to the parent CMakeLists.txt** — `qimsdk/gstreamer/gst-sample-apps/CMakeLists.txt` contains a `foreach(dir)` loop that automatically includes ALL subdirectories. Just creating the directory is sufficient. Adding an explicit entry causes a cmake conflict.
 
 ```bash
-ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps/<BINARY_NAME>"
+ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps/<BINARY_NAME>"
 ```
 
 **C5 — Push source files to linux workstation**
 ```bash
-scp ... main.c CMakeLists.txt README.md <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps/<BINARY_NAME>/
+scp ... main.c CMakeLists.txt README.md <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps/<BINARY_NAME>/
 ```
 
 Push CMakeLists.txt as-is — no modification needed since the binary name is already correct.
 
 Before this step, apply [Additional App Files](#additional-app-files--detect-and-push-from-the-readme-mode-bc) — any qualifying sidecar file (e.g. a runtime config) gets pushed alongside these three.
 
-**C6 — Source SDK env, configure, and build**
+**C6 — Source SDK env, build + install base libraries, configure, and build**
 
 > ⚠️ **Must use `bash -c '...'` for multi-command SSH** — shell variables and `&&` chains inside double-quoted SSH strings cause "Ambiguous output redirect" errors on some shells.
+
+> ⚠️ **Base libraries must be built and installed into the SDK sysroot before the main configure** — `gst-plugin-smartvencbin`'s `pkg_check_modules(qimsdk-smartvenc)` resolves against `$SDKTARGETSYSROOT`, which the downloaded SDK zip does not ship. Skipping this step makes the main `cmake configure` fail with `The following required packages were not found: - qimsdk-smartvenc`.
+
+```bash
+ssh ... "bash -c '. <env_script_path> && cd <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer && cmake -B build-base -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_PLUGIN_BASE=1 && cmake --build build-base && DESTDIR=\"\$SDKTARGETSYSROOT\" cmake --install build-base --prefix /usr'" 2>&1 | tail -10
+```
 
 > ⚠️ **Build only the specific target** — use `--target gst-qimsdk-<slug>` to avoid rebuilding all apps. `cmake --build build` alone rebuilds everything which takes much longer.
 
 ```bash
-ssh ... "bash -c '. <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && cd <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk && cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_IMSDK_PLUGINS=1 -DENABLE_GST_PLUGIN_MLTFLITE=1 -DENABLE_GST_PYTHON_EXAMPLES=1 -DENABLE_GST_SAMPLE_APPS=1 -DENABLE_GST_SAMPLE_APPS_CAMERA=1 -DENABLE_GST_PLUGIN_TOOLS=1 -DENABLE_GST_CAMERA_PLUGINS=1 && cmake --build build --target <BINARY_NAME> -- -j\$(nproc)'" 2>&1 | tail -10
+ssh ... "bash -c '. <env_script_path> && cd <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer && cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_IMSDK_PLUGINS=1 -DENABLE_GST_PLUGIN_MLTFLITE=1 -DENABLE_GST_PYTHON_EXAMPLES=1 -DENABLE_GST_SAMPLE_APPS=1 -DENABLE_GST_SAMPLE_APPS_CAMERA=1 -DENABLE_GST_PLUGIN_TOOLS=1 -DENABLE_GST_CAMERA_PLUGINS=1 -DENABLE_APP_BUILDER_CPP=1 -DENABLE_APP_BUILDER_PYTHON=1 && cmake --build build --target <BINARY_NAME> -- -j\$(nproc)'" 2>&1 | tail -10
 ```
 Save to `<artifact>_build.log`. Stop if build fails.
 Success indicator: `Built target <BINARY_NAME>`
@@ -1046,16 +1059,16 @@ Success indicator: `Built target <BINARY_NAME>`
 
 **C7 — Pull binary from linux workstation to local machine**
 
-The binary is at: `<build_dir>/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — note it's in a subdirectory named after the binary itself.
+The binary is at: `<build_dir>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — note it's in a subdirectory named after the binary itself.
 
 > ⚠️ **pscp does not support long paths on Windows.** If the full path exceeds ~230 chars, pscp silently fails. Always pull to `C:/tmp/<BINARY_NAME>` first (short path), then push from there to the QLI device.
 
 ```bash
 # Pull to short intermediate path (avoid pscp long-path failure)
 mkdir -p C:/tmp/qimsdk_compiled
-plink ... "cat <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>" > C:/tmp/qimsdk_compiled/<BINARY_NAME>
+plink ... "cat <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>" > C:/tmp/qimsdk_compiled/<BINARY_NAME>
 # OR use pscp if path is short enough:
-pscp ... <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME> C:/tmp/qimsdk_compiled/<BINARY_NAME>
+pscp ... <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME> C:/tmp/qimsdk_compiled/<BINARY_NAME>
 ```
 Verify it's an ARM64 binary: `file <binary>` should show `ELF 64-bit LSB ... ARM aarch64`
 
@@ -1088,11 +1101,11 @@ Use when: artifact is from **qimsdk-cpp-app-builder** — `main.cc` + `CMakeList
 gstreamer-app-builder's `main.c` + `GST_EXAMPLE_BIN` C sample apps) — do not confuse the two by
 CMake shape alone; check for `TEST_TARGET` (Mode D) vs `GST_EXAMPLE_BIN` (Mode C).
 
-Requires a Linux x86_64 or WSL workstation, same as Mode C — Mode D reuses every
-`LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D never clones or
-mutates a shared source tree.** Each app is cross-built **standalone, out of tree**, against the
-**Yocto standard SDK** (not gst-plugins-imsdk) — `libqimsdk-app-builder.so` ships inside the SDK's target
-sysroot, so there is no "build the C++ IMSDK SDK from source" step.
+Requires a Linux workstation (x86_64 or aarch64 — arch is auto-detected, same as Mode C) —
+Mode D reuses every `LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D
+never clones or mutates a shared source tree.** Each app is cross-built **standalone, out of tree**,
+against the **Yocto standard SDK** (not qimsdk) — `libqimsdk-app-builder.so` ships inside
+the SDK's target sysroot, so there is no "build the C++ IMSDK SDK from source" step.
 
 **Script:** `references/deploy_mode_d.py` (build delegated to `references/workspace_setup_d.py`)
 
@@ -1102,10 +1115,13 @@ The SDK is installed once into `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reus
 If not already installed, deploy resolves the SDK source in this precedence order:
 1. `LINUX_WORKSTATION_SDK_PATH`, if set — an installer already on the workstation: a `.sh` (already
    extracted, run directly, no unzip) or a `.zip` (unzipped to find the `.sh` inside). Same key as Mode C.
-2. Else a `qcom-yocto-sdk*.zip` (or `sdk.zip`) already in `LINUX_WORKSTATION_BUILD_DIR`.
+2. Else a `qcom-yocto-sdk*.zip`, `sdk.zip`, or the arch-specific zip name (see below) already in
+   `LINUX_WORKSTATION_BUILD_DIR`.
 3. Else `LINUX_WORKSTATION_SDK_URL`, if set (`file://` path or `http(s)://` URL).
-4. Else the default Yocto SDK zip is downloaded from:
-   `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-armv8a/qcom-yocto-sdk-deploy-0807.zip`.
+4. Else the workstation arch is detected (`uname -m`, same as Mode C) and the matching default
+   Yocto SDK zip is downloaded:
+   - x86_64: `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+   - aarch64: `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
 
 Then it unzips (if needed) to find the `.sh` installer, runs it non-interactively
 (`<installer>.sh -d <sdk_dir> -y`), and verifies an `environment-setup-*-qcom-linux` script exists
@@ -1292,16 +1308,16 @@ Fix: Do not add `add_subdirectory`. The `foreach` glob handles it — as long as
 
 
 ### Mode C (host build)
-1. **Host SDK architecture must match the linux workstation** — `x86-qli-2.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch and picks the right zip automatically. Windows ARM with WSL2 Ubuntu (aarch64) works — the ARM SDK is available on codelinaro alongside the x86 zip.
+1. **Host SDK architecture must match the linux workstation** — `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch and picks the right zip automatically. Windows ARM with WSL2 Ubuntu (aarch64) works — the ARM SDK is available on codelinaro alongside the x86 zip.
 2. **Use local disk, not NFS home** — NFS mounts often have user quotas that cause silent write failures. Use `/local/mnt/workspace/` or similar local path.
 3. **Do NOT add `add_subdirectory()` to parent CMakeLists.txt** — the imsdk repo auto-discovers all subdirs via a `foreach` loop. Adding it explicitly causes "binary directory already used" cmake error.
 4. **Generated apps use `gst-qimsdk-` prefix** — the `qimsdk-gstreamer-dev` skill generates binaries named `gst-qimsdk-<name>`. This avoids conflicts with the imsdk repo's own apps (`gst-ai-*`). Use the binary name from `CMakeLists.txt` (`set(GST_EXAMPLE_BIN ...)`) directly — this is BOTH the cmake target name AND the output binary filename.
 5. **Binary location after build:** `<build>/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — the binary is in a subdirectory named after itself. Do not search in other locations.
 6. **Use `bash -c '...'` for multi-command SSH** — chained commands in double-quoted SSH strings cause "Ambiguous output redirect" errors on some shells.
 7. **Build only the target** — use `cmake --build build --target <name>` not `cmake --build build` which rebuilds all apps and takes much longer.
-8. **Source the SDK env in every new shell** — the environment is not persistent; always `. .../environment-setup-armv8a-qcom-linux` at the start of build commands.
+8. **Source the SDK env in every new shell** — the environment is not persistent; always `. <sdk_dir>/environment-setup-*-qcom-linux` at the start of build commands.
 9. **Stale build directory** — if cmake previously failed, clean `build/` before retrying to avoid "binary directory already used" errors.
-10. **CC/CXX may be empty** — `source environment-setup-armv8a-qcom-linux` may not set CC/CXX via plink batch mode. This is normal — the host compiler is on PATH. If cmake fails to find the compiler, pass `-DCMAKE_C_COMPILER=aarch64-qcom-linux-gcc -DCMAKE_CXX_COMPILER=aarch64-qcom-linux-g++` explicitly.
+10. **CC/CXX may be empty** — `source environment-setup-*-qcom-linux` may not set CC/CXX via plink batch mode. This is normal — the host compiler is on PATH. If cmake fails to find the compiler, pass `-DCMAKE_C_COMPILER=aarch64-qcom-linux-gcc -DCMAKE_CXX_COMPILER=aarch64-qcom-linux-g++` explicitly.
 11. **pscp multi-file loops** — pscp does not support wildcards or multiple source args. Loop:
     ```bash
     for f in file1 file2 file3; do pscp -pw <PW> -hostkey "<HK>" "$f" user@host:dest/; done
@@ -1309,3 +1325,6 @@ Fix: Do not add `add_subdirectory`. The `foreach` glob handles it — as long as
 12. **pscp long paths** — paths > ~230 chars fail silently on Windows. Always copy artifact files to `C:/tmp/` before pscp.
 13. **$HOME in C source** — `#define PATH "$HOME/media/..."` is a string literal in C; $HOME is never expanded at runtime. Manually replace `$HOME` with the actual device home directory (e.g. `/root`) in main.c before building.
 14. **Re-run cmake after adding new app subdirectory** — cmake discovers subdirs at configure time, not at build time. If a new app dir is added after cmake ran, re-run cmake before building.
+
+### Mode D (C++ standalone host build)
+1. **Yocto SDK zip must match the linux workstation arch** — `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch (`uname -m`) and picks the right zip automatically, same as Mode C.

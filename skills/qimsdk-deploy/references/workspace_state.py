@@ -15,11 +15,11 @@ Mode B states (Ubuntu on-device):
   4  build/gst-sample-apps/{binary}/{binary} exists (binary built)
 
 Mode C states (Linux workstation host build):
-  0  SDK env script not found at {BUILD_DIR}/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux
-  1  SDK installed, no gst-plugins-imsdk/CMakeLists.txt (at imsdk_path if given, else {BUILD_DIR}/gst-plugins-imsdk)
-  2  Repo cloned, no gst-plugins-imsdk/build/Makefile (cmake not run)
+  0  SDK env script not found under {BUILD_DIR}/qcom-sdk/environment-setup-*-qcom-linux
+  1  SDK installed, no qimsdk/CMakeLists.txt (at imsdk_path if given, else {BUILD_DIR}/qimsdk)
+  2  Repo cloned, no qimsdk/gstreamer/build/Makefile (cmake not run)
   3  cmake configured, binary not yet built
-  4  build/gst-sample-apps/{binary}/{binary} exists
+  4  gstreamer/build/gst-sample-apps/{binary}/{binary} exists
 
 Mode D states (Linux/WSL workstation host build of a standalone IMSDK C++ SDK app):
   0  Yocto SDK env script not found under {BUILD_DIR}/qcom-sdk/environment-setup-*-qcom-linux
@@ -130,9 +130,10 @@ def detect_mode_b_state(ssh, source_root_hint=None, binary_name=None):
 
 # ── Mode C ────────────────────────────────────────────────────────────────────
 
-_SDK_ENV_RELPATH    = 'images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux'
-_IMSDK_REPO_SUBDIR  = 'gst-plugins-imsdk'
+_SDK_ENV_RELPATH    = 'qcom-sdk'  # Yocto SDK install dir; env script name is version-specific, discovered by glob
+_IMSDK_REPO_SUBDIR  = 'qimsdk'  # https://github.com/qualcomm/qimsdk.git — top-level repo with gstreamer/ subdir
 _IMSDK_BUILD_SUBDIR = 'build'
+_GST_SUBDIR         = 'gstreamer'  # gst-sample-apps and gst-plugin-* all live under this in the new repo layout
 
 
 def detect_mode_c_state(ssh_dc, build_dir, binary_name=None, imsdk_path=None):
@@ -143,9 +144,9 @@ def detect_mode_c_state(ssh_dc, build_dir, binary_name=None, imsdk_path=None):
         ssh_dc      : connected SSH object (paramiko client or _SSH instance)
         build_dir   : absolute path to LINUX_WORKSTATION_BUILD_DIR
         binary_name : optional binary name to check states 3 and 4
-        imsdk_path  : optional absolute path to an existing gst-plugins-imsdk clone
+        imsdk_path  : optional absolute path to an existing qimsdk clone
                       on the workstation. When set, used as imsdk_dir instead of
-                      deriving it as {build_dir}/gst-plugins-imsdk. State 1 checks
+                      deriving it as {build_dir}/qimsdk. State 1 checks
                       for CMakeLists.txt at this path; states 2-4 use it for all
                       build sub-paths.
 
@@ -158,29 +159,30 @@ def detect_mode_c_state(ssh_dc, build_dir, binary_name=None, imsdk_path=None):
         }
     """
     bd = build_dir.rstrip('/')
-    env_script = f'{bd}/{_SDK_ENV_RELPATH}'
+    sdk_install_dir = f'{bd}/{_SDK_ENV_RELPATH}'
+    env_script = _find_sdk_env_script(ssh_dc, sdk_install_dir)
     # imsdk_dir: caller-supplied path wins over the default derived location.
     imsdk_dir = imsdk_path.rstrip('/') if imsdk_path else f'{bd}/{_IMSDK_REPO_SUBDIR}'
 
-    if not _exists(ssh_dc, env_script, is_file=True):
+    if not env_script:
         return {'state': 0, 'env_script': None, 'imsdk_dir': None,
-                'detail': f'SDK env script not found at {env_script}'}
+                'detail': f'Yocto SDK env script not found under {sdk_install_dir}'}
 
     imsdk_cmake = f'{imsdk_dir}/CMakeLists.txt'
     if not _exists(ssh_dc, imsdk_cmake, is_file=True):
         return {'state': 1, 'env_script': env_script, 'imsdk_dir': None,
-                'detail': f'SDK installed but gst-plugins-imsdk not found at {imsdk_dir}'}
+                'detail': f'SDK installed but qimsdk repo not found at {imsdk_dir}'}
 
-    build_makefile = f'{imsdk_dir}/{_IMSDK_BUILD_SUBDIR}/Makefile'
+    build_makefile = f'{imsdk_dir}/{_GST_SUBDIR}/{_IMSDK_BUILD_SUBDIR}/Makefile'
     if not _exists(ssh_dc, build_makefile, is_file=True):
         return {'state': 2, 'env_script': env_script, 'imsdk_dir': imsdk_dir,
                 'detail': f'Repo cloned but build/Makefile not found — cmake not run'}
 
     if not binary_name:
         return {'state': 3, 'env_script': env_script, 'imsdk_dir': imsdk_dir,
-                'detail': f'cmake configured at {imsdk_dir}/build — no binary_name provided for further check'}
+                'detail': f'cmake configured at {imsdk_dir}/{_GST_SUBDIR}/build — no binary_name provided for further check'}
 
-    binary_path = posixpath.join(imsdk_dir, _IMSDK_BUILD_SUBDIR, 'gst-sample-apps', binary_name, binary_name)
+    binary_path = posixpath.join(imsdk_dir, _GST_SUBDIR, _IMSDK_BUILD_SUBDIR, 'gst-sample-apps', binary_name, binary_name)
     if not _exists(ssh_dc, binary_path, is_file=True):
         return {'state': 3, 'env_script': env_script, 'imsdk_dir': imsdk_dir,
                 'detail': f'cmake configured but {binary_name} not yet compiled'}
@@ -196,7 +198,7 @@ def detect_mode_c_state(ssh_dc, build_dir, binary_name=None, imsdk_path=None):
 # has a version-specific name (e.g. environment-setup-armv8-2a-qcom-linux), so we
 # discover it by glob rather than hardcoding. Each app is built out-of-tree in its
 # own dir under {BUILD_DIR}/qimsdk-cpp-apps/{target}/ — no shared source tree is
-# mutated (contrast Mode C, which registers apps inside gst-plugins-imsdk).
+# mutated (contrast Mode C, which registers apps inside qimsdk).
 
 _SDK_INSTALL_SUBDIR = 'qcom-sdk'
 _CPP_APPS_SUBDIR    = 'qimsdk-cpp-apps'
@@ -223,7 +225,8 @@ def _find_sdk_env_script(ssh_dc, sdk_install_dir):
 
 def detect_mode_d_state(ssh_dc, build_dir, target_name=None):
     """
-    Detect Mode D workspace state on a Linux/WSL x86_64 workstation.
+    Detect Mode D workspace state on a Linux/WSL workstation (x86_64 or
+    aarch64 — arch is auto-detected, same as Mode C).
 
     Args:
         ssh_dc      : connected SSH object (paramiko client or _SSH instance)

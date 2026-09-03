@@ -93,7 +93,7 @@ Load whenever creating, modifying, validating, or packaging generated artifacts.
 2. **Files** — table listing each file and its purpose
 3. **Pipeline Flow** — Text Summary + Mermaid Diagram (per `artifact-contract.md`)
 4. **Placeholders to Fill** — list every `<PLACEHOLDER>` in `pipeline.sh` with a description
-5. **Steps to Run on QLI**:
+5. **Steps to Run**:
    - First line, always: state that all models, labels, media, and any other files the pipeline references must already be present on the device at their referenced paths before running.
    - If the pipeline contains `pulsesrc` or `pulsesink`, include `wpctl status` followed by `wpctl set-default <node_no.>` on the device, after `ssh` and before the run command. Replace `<node_no.>` with the actual device-specific node number discovered from `wpctl status`; no default node can be assumed.
    - If one or more elements explicitly selects the GPU delegate (bare `delegate=gpu` on a discrete `qtimltflite`/`qtimlsnpe`/`qtimlqnn` element, or `inference-delegate=gpu` on an ML-bin stage — not for HTP/NPU external delegate selections), include `export OCL_ICD_FILENAMES=/usr/lib/libOpenCL_adreno.so.1` on the device, after `ssh` and before the run command.
@@ -105,30 +105,30 @@ Load whenever creating, modifying, validating, or packaging generated artifacts.
      export WAYLAND_DISPLAY=$(basename "$WS")
      ```
    - Join every applicable command from the four rows above into exactly ONE combined `&&`-chained bash block, in this order: PulseAudio node selection, GPU/OpenCL export, file-descriptor limit, then Wayland discovery/exports. Omit each line whose row is not applicable and omit the whole block if none apply. The `&&` chain must remain one fenced bash block even when only one row applies.
-   - Emit the scp/ssh/(env-block)/run sequence to get the artifact onto the QLI device and execute it, with the env-setup block (if any) inserted on the device, between `ssh` and the run command — never on the host before `scp`:
+   - Emit the scp/ssh/(env-block)/run sequence to get the artifact onto the device and execute it, with the env-setup block (if any) inserted on the device, between `ssh` and the run command — never on the host before `scp`:
      ```bash
      # Copy the app to device
-     scp pipeline.sh root@<device-ip>:/root/
+     scp pipeline.sh <user>@<device-ip>:~/
 
      # SSH into device and run
-     ssh root@<device-ip>
-     chmod +x /root/pipeline.sh
-     bash /root/pipeline.sh
+     ssh <user>@<device-ip>
+     chmod +x ~/pipeline.sh
+     bash ~/pipeline.sh
      ```
-     When a command-based prerequisite applies, insert the env-setup block between `ssh root@<device-ip>` and `chmod +x /root/pipeline.sh`, for example:
+     When a command-based prerequisite applies, insert the env-setup block between `ssh <user>@<device-ip>` and `chmod +x ~/pipeline.sh`, for example:
      ```bash
      # Copy the app to device
-     scp pipeline.sh root@<device-ip>:/root/
+     scp pipeline.sh <user>@<device-ip>:~/
 
      # SSH into device and run
-     ssh root@<device-ip>
+     ssh <user>@<device-ip>
      WS=$(find /run -maxdepth 3 -name "wayland-*" ! -name "*.lock" 2>/dev/null | head -1) && \
      export XDG_RUNTIME_DIR=$(dirname "$WS") && \
      export WAYLAND_DISPLAY=$(basename "$WS")
-     chmod +x /root/pipeline.sh
-     bash /root/pipeline.sh
+     chmod +x ~/pipeline.sh
+     bash ~/pipeline.sh
      ```
-     Keep `<device-ip>` as an explicit placeholder — never invent a real IP.
+     Keep `<user>` and `<device-ip>` as explicit placeholders — never invent a real user or IP.
    - If the pipeline uses a camera (`qticamsrc`/`qtiqmmfsrc`/`v4l2src`), consumes an RTSP input, or reads from `filesrc`/another file-backed source, add a short prose note (not a shell export) immediately after the run command stating the corresponding readiness requirement: camera/`cam-server` availability, an upstream RTSP producer already running, or the input file(s) existing at their referenced paths.
 6. **Assumptions** — codec, display server, model format, delegate library location. If the pipeline targets "maximum resolution", state that 3840×2160 (4K UHD) was assumed as the maximum and the user should adjust if their display or source differs. If a `qticamsrc`/`qtiqmmfsrc` camera pipeline defaults omitted camera caps to `1920x1080 @ 30fps`, state that here. If `qtimlpostprocess module=` is not in `plugin-catalog.md`'s Supported Module Table and `tensors=`/`layers=` was omitted, state that here: the module is undocumented in this skill and tensor filtering was omitted unverified.
 
@@ -142,7 +142,7 @@ Load whenever creating, modifying, validating, or packaging generated artifacts.
 2. **Files** — table listing each file and its purpose
 3. **Pipeline Flow** — Text Summary + Mermaid Diagram (per `artifact-contract.md`)
 4. **Placeholders to Fill** — list every `<PLACEHOLDER>` in `main.c` and `CMakeLists.txt` with a description
-5. **Steps to Run on QLI**:
+5. **Steps to Run**:
    - First line, always: state that all models, labels, media, and any other files the app references must already be present on the device at their referenced paths before running.
    - If the app uses `pulsesrc` or `pulsesink`, include `wpctl status` followed by `wpctl set-default <node_no.>` on the device, after `ssh` and before the run command. Replace `<node_no.>` with the actual device-specific node number discovered from `wpctl status`; no default node can be assumed.
    - If one or more elements explicitly selects the GPU delegate (bare `delegate=gpu` on a discrete `qtimltflite`/`qtimlsnpe`/`qtimlqnn` element, or `inference-delegate=gpu` on an ML-bin stage — not for HTP/NPU external delegate selections), include `export OCL_ICD_FILENAMES=/usr/lib/libOpenCL_adreno.so.1` on the device, after `ssh` and before the run command.
@@ -157,27 +157,27 @@ Load whenever creating, modifying, validating, or packaging generated artifacts.
    - Emit the scp/ssh/(env-block)/run sequence, using the artifact's actual `GST_EXAMPLE_BIN` binary name (e.g. `gst-qimsdk-event-encoder`) in place of the file/run placeholders below — never a generic placeholder like `<binary-name>` — with the env-setup block (if any) inserted on the device, between `ssh` and the run command — never on the host before `scp`:
      ```bash
      # Copy the app to device
-     scp <binary-name> root@<device-ip>:/root/
+     scp <binary-name> <user>@<device-ip>:~/
 
      # SSH into device and run
-     ssh root@<device-ip>
-     chmod +x /root/<binary-name>
+     ssh <user>@<device-ip>
+     chmod +x ~/<binary-name>
      ./<binary-name> [required arguments]
      ```
-     When a command-based prerequisite applies, insert the env-setup block between `ssh root@<device-ip>` and `chmod +x /root/<binary-name>`, for example:
+     When a command-based prerequisite applies, insert the env-setup block between `ssh <user>@<device-ip>` and `chmod +x ~/<binary-name>`, for example:
      ```bash
      # Copy the app to device
-     scp <binary-name> root@<device-ip>:/root/
+     scp <binary-name> <user>@<device-ip>:~/
 
      # SSH into device and run
-     ssh root@<device-ip>
+     ssh <user>@<device-ip>
      WS=$(find /run -maxdepth 3 -name "wayland-*" ! -name "*.lock" 2>/dev/null | head -1) && \
      export XDG_RUNTIME_DIR=$(dirname "$WS") && \
      export WAYLAND_DISPLAY=$(basename "$WS")
-     chmod +x /root/<binary-name>
+     chmod +x ~/<binary-name>
      ./<binary-name> [required arguments]
      ```
-     Substitute the real binary name for `<binary-name>` and keep `<device-ip>` as an explicit placeholder — never invent a real IP.
+     Substitute the real binary name for `<binary-name>` and keep `<user>` and `<device-ip>` as explicit placeholders — never invent a real user or IP.
    - If the app uses a camera (`qticamsrc`/`qtiqmmfsrc`/`v4l2src`), consumes an RTSP input, or reads from `filesrc`/another file-backed source, add a short prose note (not a shell export) immediately after the run command stating the corresponding readiness requirement: camera/`cam-server` availability, an upstream RTSP producer already running, or the input file(s) existing at their referenced paths.
 6. **Assumptions** — codec, display server, model format, delegate library location. If the pipeline targets "maximum resolution", state that 3840×2160 (4K UHD) was assumed as the maximum and the user should adjust if their display or source differs. If a `qticamsrc`/`qtiqmmfsrc` camera pipeline defaults omitted camera caps to `1920x1080 @ 30fps`, state that here. If `qtimlpostprocess module=` is not in `plugin-catalog.md`'s Supported Module Table and `tensors=`/`layers=` was omitted, state that here: the module is undocumented in this skill and tensor filtering was omitted unverified.
 7. **Build Instructions** — always last, no exceptions:

@@ -966,4 +966,4 @@ Rules:
 ## Deliverable Rule
 
 - Generated app deliverables must include `main.cc`, `CMakeLists.txt`, and `README.md`.
-- `README.md` must include `Steps to Compile` (the Yocto build link only — see `references/artifact-contract.md`), `Steps to Run on QLI`, and `Pipeline Flow` with `Text Summary` and `Mermaid Diagram` subsections.
+- `README.md` must include `Steps to Compile` (the Yocto build link only — see `references/artifact-contract.md`), `Steps to Run`, and `Pipeline Flow` with `Text Summary` and `Mermaid Diagram` subsections.
