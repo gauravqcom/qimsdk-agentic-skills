@@ -11,7 +11,7 @@ Linux or WSL workstation (x86_64 or aarch64 — arch is auto-detected, same as
 Mode C), then the deploy script ships the ARM64 binary to the QLI device.
 
 Contrast with Mode C (gstreamer-app-builder C sample apps):
-  - Mode C clones gst-plugins-imsdk and builds the app INSIDE that source tree.
+  - Mode C clones qimsdk and builds the app INSIDE that source tree.
   - Mode D builds each app OUT OF TREE as a standalone SDK consumer, in its own
     dir, pushing the artifact's own CMakeLists.txt as-is. It links
     `qimsdk-app-builder` via a plain target_link_libraries() — cmake resolves

@@ -273,13 +273,13 @@ All Mode C keys above are required. Preflight exits immediately with `[FAIL]` if
 | Key | What it is | Example |
 |-----|-----------|---------|
 | `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to an SDK installer — a `.zip` (unzipped automatically to find the installer inside) or a `.sh` (already extracted, run directly). Only consulted when the SDK is not yet installed; ignored otherwise. If not set, falls back to the existing zip-lookup + codelinaro.org download. | `/local/mnt/sdk/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` or `/home/user/sdk-installer.sh` |
-| `LINUX_WORKSTATION_IMSDK_PATH` | Absolute path **on the workstation** to an already-cloned `gst-plugins-imsdk` repo. When set, this path is used directly and the git clone step is skipped entirely. If the path is set but `CMakeLists.txt` is not found there, deploy fails with a clear message — it never silently falls back to cloning a fresh copy. If not set, falls back to cloning from GitHub into `{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`. | `/local/mnt/repos/gst-plugins-imsdk` |
+| `LINUX_WORKSTATION_IMSDK_PATH` | Absolute path **on the workstation** to an already-cloned `qimsdk` repo. When set, this path is used directly and the git clone step is skipped entirely. If the path is set but `CMakeLists.txt` is not found there, deploy fails with a clear message — it never silently falls back to cloning a fresh copy. If not set, falls back to cloning from GitHub into `{LINUX_WORKSTATION_BUILD_DIR}/qimsdk`. | `/local/mnt/repos/qimsdk` |
 
 **Ask the user during the Mode C wizard, right after `LINUX_WORKSTATION_BUILD_DIR`:**
 1. "Do you have the SDK installer already on the workstation (as a `.zip` or `.sh`)?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_SDK_PATH`
    — if no: nothing to do; SDK downloads automatically on first deploy
-2. "Do you have `gst-plugins-imsdk` already cloned on the workstation?"
+2. "Do you have `qimsdk` already cloned on the workstation?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_IMSDK_PATH`
    — if no: nothing to do; repo clones automatically on first deploy
 
@@ -287,7 +287,7 @@ All Mode C keys above are required. Preflight exits immediately with `[FAIL]` if
 
 Mode D reuses every `LINUX_WORKSTATION_HOST/USER/KEY/PASSWORD/PORT/BUILD_DIR` key above — it targets
 the same class of Linux workstation as Mode C (x86_64 or aarch64 — arch is auto-detected), just
-with a different SDK (the Yocto standard SDK, not gst-plugins-imsdk). Optional additions:
+with a different SDK (the Yocto standard SDK, not qimsdk). Optional additions:
 
 | Key | What it is | How to find it | Example |
 |-----|-----------|---------------|---------|
@@ -421,7 +421,7 @@ distinct choice, not to be merged or abbreviated when relaying to the user:**
 
 Mode C and Mode D both host-build on a workstation and push a binary to the device, but they target
 different builder contracts (gstreamer-app-builder's C sample apps vs cpp-app-builder's standalone
-C++ SDK apps) and use different toolchains (gst-plugins-imsdk source tree vs the Yocto standard SDK)
+C++ SDK apps) and use different toolchains (qimsdk source tree vs the Yocto standard SDK)
 — check `main.c`+`GST_EXAMPLE_BIN` (Mode C) vs `main.cc`+`TEST_TARGET` (Mode D) in the artifact.
 
 ### Step 1 — Read `configs/.env` for the selected mode
@@ -456,7 +456,7 @@ After collecting `LINUX_WORKSTATION_BUILD_DIR`, always ask these questions befor
 - **No** → leave unset; SDK downloads automatically from codelinaro.org on first deploy
 
 **Mode C — repo question (ask exactly this):**
-> "Do you have `gst-plugins-imsdk` already cloned on the workstation?"
+> "Do you have `qimsdk` already cloned on the workstation?"
 - **Yes** → "What is the full path to it on the workstation?" → set `LINUX_WORKSTATION_IMSDK_PATH`
 - **No** → leave unset; repo clones automatically from GitHub on first deploy
 
@@ -789,10 +789,10 @@ if not set in `.env`. Set it to override or speed up detection.
 
 | State | Indicator | Action taken |
 |-------|-----------|--------------|
-| 0 — no SDK | `images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux` absent | unzip `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
-| 1 — SDK installed | `gst-plugins-imsdk/CMakeLists.txt` absent | `git clone https://github.com/qualcomm/gst-plugins-imsdk.git` |
-| 2 — repo cloned | `gst-plugins-imsdk/build/Makefile` absent | cmake configure with host SDK toolchain |
-| 3 — cmake configured | `build/gst-sample-apps/{binary}/{binary}` absent | push source + `cmake --build build --target {binary}` |
+| 0 — no SDK | `qcom-sdk/environment-setup-*-qcom-linux` absent | unzip `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
+| 1 — SDK installed | `qimsdk/CMakeLists.txt` absent | `git clone https://github.com/qualcomm/qimsdk.git` |
+| 2 — repo cloned | `qimsdk/gstreamer/build/Makefile` absent | build + install base libraries into SDK sysroot, then cmake configure with host SDK toolchain |
+| 3 — cmake configured | `gstreamer/build/gst-sample-apps/{binary}/{binary}` absent | push source + `cmake --build build --target {binary}` |
 | 4 — binary built | binary present | push source + incremental cmake --build (~4s) |
 
 **SDK zip lookup:** if `LINUX_WORKSTATION_SDK_PATH` is set, that path is used directly (a `.zip`
@@ -805,7 +805,7 @@ at that path and re-run.
 **Repo lookup:** if `LINUX_WORKSTATION_IMSDK_PATH` is set, that path is used directly as `imsdk_dir`
 and the clone step is skipped — deploy fails with a clear message if `CMakeLists.txt` is not found
 there rather than silently cloning a fresh copy. Otherwise cloned from GitHub into
-`{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`.
+`{LINUX_WORKSTATION_BUILD_DIR}/qimsdk`.
 
 ---
 
@@ -984,29 +984,29 @@ Store the chosen path as `LINUX_WORKSTATION_BUILD_DIR`.
 
 **C1 — Verify host SDK on linux workstation**
 
-The SDK env script is always at `{LINUX_WORKSTATION_BUILD_DIR}/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`. Check it exists at exactly that path:
+The SDK is installed under `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk/` — the env script name is version-specific (e.g. `environment-setup-armv8-2a-qcom-linux`), so discover it by glob:
 ```bash
-ssh ... "test -f <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && echo FOUND || echo NOT_FOUND"
+ssh ... "ls <LINUX_WORKSTATION_BUILD_DIR>/qcom-sdk/environment-setup-*-qcom-linux 2>/dev/null | head -1"
 ```
-- If `FOUND` → validate the compiler works:
+- If a path is returned → validate the compiler works:
   ```bash
-  ssh ... "bash -c '. <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && aarch64-qcom-linux-gcc --version 2>&1 | head -1'"
+  ssh ... "bash -c '. <env_script_path> && aarch64-qcom-linux-gcc --version 2>&1 | head -1'"
   ```
-  - If output includes `aarch64-qcom-linux-gcc` version string → SDK is functional. Set `LINUX_WORKSTATION_ENV_SETUP=<LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`.
+  - If output includes `aarch64-qcom-linux-gcc` version string → SDK is functional. Set `LINUX_WORKSTATION_ENV_SETUP=<env_script_path>`.
   - If compiler not found or errors → report to user: "SDK env script found but `aarch64-qcom-linux-gcc` is not working. The SDK installation may be incomplete. Please re-install the SDK at `<LINUX_WORKSTATION_BUILD_DIR>` and retry." **Stop.**
-- If `NOT_FOUND` → report to user: "SDK env script not found at `<LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux`. Please check that the SDK installer has been run with `-d .` from the `images/qcom-armv8a/sdk/` directory inside `LINUX_WORKSTATION_BUILD_DIR` and retry." **Stop.**
+- If no path is returned → report to user: "SDK env script not found under `<LINUX_WORKSTATION_BUILD_DIR>/qcom-sdk/`. Please check that the SDK installer has been run with `-d qcom-sdk` from inside `LINUX_WORKSTATION_BUILD_DIR` and retry." **Stop.**
 
 > **Note:** The skill does not install the host SDK automatically. SDK setup is a one-time operation requiring ~5GB disk space; it must be done by the user before the first Mode C build.
 
-**C2 — Verify gst-plugins-imsdk on linux workstation**
+**C2 — Verify qimsdk on linux workstation**
 
-`gst-plugins-imsdk` is always expected at `{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`. The deploy script checks this path and fails immediately if it is not found:
+`qimsdk` is always expected at `{LINUX_WORKSTATION_BUILD_DIR}/qimsdk` (its `gst-sample-apps`/`gst-plugin-*` etc. live under a `gstreamer/` subdir). The deploy script checks this path and fails immediately if it is not found:
 ```bash
-ssh ... "test -d <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps && echo EXISTS || echo NOT_EXISTS"
+ssh ... "test -d <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps && echo EXISTS || echo NOT_EXISTS"
 ```
 If `NOT_EXISTS` → clone it first:
 ```bash
-ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR> && cd <LINUX_WORKSTATION_BUILD_DIR> && git clone https://github.com/qualcomm/gst-plugins-imsdk.git"
+ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR> && cd <LINUX_WORKSTATION_BUILD_DIR> && git clone https://github.com/qualcomm/qimsdk.git"
 ```
 
 ---
@@ -1022,29 +1022,35 @@ The binary name already has the `gst-qimsdk-` prefix (e.g. `gst-qimsdk-object-de
 
 Use the binary name from CMakeLists.txt as the directory name directly.
 
-> ⚠️ **Do NOT add `add_subdirectory()` to the parent CMakeLists.txt** — `gst-plugins-imsdk/gst-sample-apps/CMakeLists.txt` contains a `foreach(dir)` loop that automatically includes ALL subdirectories. Just creating the directory is sufficient. Adding an explicit entry causes a cmake conflict.
+> ⚠️ **Do NOT add `add_subdirectory()` to the parent CMakeLists.txt** — `qimsdk/gstreamer/gst-sample-apps/CMakeLists.txt` contains a `foreach(dir)` loop that automatically includes ALL subdirectories. Just creating the directory is sufficient. Adding an explicit entry causes a cmake conflict.
 
 ```bash
-ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps/<BINARY_NAME>"
+ssh ... "mkdir -p <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps/<BINARY_NAME>"
 ```
 
 **C5 — Push source files to linux workstation**
 ```bash
-scp ... main.c CMakeLists.txt README.md <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/gst-sample-apps/<BINARY_NAME>/
+scp ... main.c CMakeLists.txt README.md <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/gst-sample-apps/<BINARY_NAME>/
 ```
 
 Push CMakeLists.txt as-is — no modification needed since the binary name is already correct.
 
 Before this step, apply [Additional App Files](#additional-app-files--detect-and-push-from-the-readme-mode-bc) — any qualifying sidecar file (e.g. a runtime config) gets pushed alongside these three.
 
-**C6 — Source SDK env, configure, and build**
+**C6 — Source SDK env, build + install base libraries, configure, and build**
 
 > ⚠️ **Must use `bash -c '...'` for multi-command SSH** — shell variables and `&&` chains inside double-quoted SSH strings cause "Ambiguous output redirect" errors on some shells.
+
+> ⚠️ **Base libraries must be built and installed into the SDK sysroot before the main configure** — `gst-plugin-smartvencbin`'s `pkg_check_modules(qimsdk-smartvenc)` resolves against `$SDKTARGETSYSROOT`, which the downloaded SDK zip does not ship. Skipping this step makes the main `cmake configure` fail with `The following required packages were not found: - qimsdk-smartvenc`.
+
+```bash
+ssh ... "bash -c '. <env_script_path> && cd <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer && cmake -B build-base -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_PLUGIN_BASE=1 && cmake --build build-base && DESTDIR=\"\$SDKTARGETSYSROOT\" cmake --install build-base --prefix /usr'" 2>&1 | tail -10
+```
 
 > ⚠️ **Build only the specific target** — use `--target gst-qimsdk-<slug>` to avoid rebuilding all apps. `cmake --build build` alone rebuilds everything which takes much longer.
 
 ```bash
-ssh ... "bash -c '. <LINUX_WORKSTATION_BUILD_DIR>/images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux && cd <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk && cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_IMSDK_PLUGINS=1 -DENABLE_GST_PLUGIN_MLTFLITE=1 -DENABLE_GST_PYTHON_EXAMPLES=1 -DENABLE_GST_SAMPLE_APPS=1 -DENABLE_GST_SAMPLE_APPS_CAMERA=1 -DENABLE_GST_PLUGIN_TOOLS=1 -DENABLE_GST_CAMERA_PLUGINS=1 && cmake --build build --target <BINARY_NAME> -- -j\$(nproc)'" 2>&1 | tail -10
+ssh ... "bash -c '. <env_script_path> && cd <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer && cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_GST_IMSDK_PLUGINS=1 -DENABLE_GST_PLUGIN_MLTFLITE=1 -DENABLE_GST_PYTHON_EXAMPLES=1 -DENABLE_GST_SAMPLE_APPS=1 -DENABLE_GST_SAMPLE_APPS_CAMERA=1 -DENABLE_GST_PLUGIN_TOOLS=1 -DENABLE_GST_CAMERA_PLUGINS=1 -DENABLE_APP_BUILDER_CPP=1 -DENABLE_APP_BUILDER_PYTHON=1 && cmake --build build --target <BINARY_NAME> -- -j\$(nproc)'" 2>&1 | tail -10
 ```
 Save to `<artifact>_build.log`. Stop if build fails.
 Success indicator: `Built target <BINARY_NAME>`
@@ -1053,16 +1059,16 @@ Success indicator: `Built target <BINARY_NAME>`
 
 **C7 — Pull binary from linux workstation to local machine**
 
-The binary is at: `<build_dir>/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — note it's in a subdirectory named after the binary itself.
+The binary is at: `<build_dir>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — note it's in a subdirectory named after the binary itself.
 
 > ⚠️ **pscp does not support long paths on Windows.** If the full path exceeds ~230 chars, pscp silently fails. Always pull to `C:/tmp/<BINARY_NAME>` first (short path), then push from there to the QLI device.
 
 ```bash
 # Pull to short intermediate path (avoid pscp long-path failure)
 mkdir -p C:/tmp/qimsdk_compiled
-plink ... "cat <LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>" > C:/tmp/qimsdk_compiled/<BINARY_NAME>
+plink ... "cat <LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>" > C:/tmp/qimsdk_compiled/<BINARY_NAME>
 # OR use pscp if path is short enough:
-pscp ... <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/gst-plugins-imsdk/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME> C:/tmp/qimsdk_compiled/<BINARY_NAME>
+pscp ... <LINUX_WORKSTATION_USER>@<LINUX_WORKSTATION_HOST>:<LINUX_WORKSTATION_BUILD_DIR>/qimsdk/gstreamer/build/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME> C:/tmp/qimsdk_compiled/<BINARY_NAME>
 ```
 Verify it's an ARM64 binary: `file <binary>` should show `ELF 64-bit LSB ... ARM aarch64`
 
@@ -1098,7 +1104,7 @@ CMake shape alone; check for `TEST_TARGET` (Mode D) vs `GST_EXAMPLE_BIN` (Mode C
 Requires a Linux workstation (x86_64 or aarch64 — arch is auto-detected, same as Mode C) —
 Mode D reuses every `LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D
 never clones or mutates a shared source tree.** Each app is cross-built **standalone, out of tree**,
-against the **Yocto standard SDK** (not gst-plugins-imsdk) — `libqimsdk-app-builder.so` ships inside
+against the **Yocto standard SDK** (not qimsdk) — `libqimsdk-app-builder.so` ships inside
 the SDK's target sysroot, so there is no "build the C++ IMSDK SDK from source" step.
 
 **Script:** `references/deploy_mode_d.py` (build delegated to `references/workspace_setup_d.py`)
@@ -1309,9 +1315,9 @@ Fix: Do not add `add_subdirectory`. The `foreach` glob handles it — as long as
 5. **Binary location after build:** `<build>/gst-sample-apps/<BINARY_NAME>/<BINARY_NAME>` — the binary is in a subdirectory named after itself. Do not search in other locations.
 6. **Use `bash -c '...'` for multi-command SSH** — chained commands in double-quoted SSH strings cause "Ambiguous output redirect" errors on some shells.
 7. **Build only the target** — use `cmake --build build --target <name>` not `cmake --build build` which rebuilds all apps and takes much longer.
-8. **Source the SDK env in every new shell** — the environment is not persistent; always `. .../environment-setup-armv8a-qcom-linux` at the start of build commands.
+8. **Source the SDK env in every new shell** — the environment is not persistent; always `. <sdk_dir>/environment-setup-*-qcom-linux` at the start of build commands.
 9. **Stale build directory** — if cmake previously failed, clean `build/` before retrying to avoid "binary directory already used" errors.
-10. **CC/CXX may be empty** — `source environment-setup-armv8a-qcom-linux` may not set CC/CXX via plink batch mode. This is normal — the host compiler is on PATH. If cmake fails to find the compiler, pass `-DCMAKE_C_COMPILER=aarch64-qcom-linux-gcc -DCMAKE_CXX_COMPILER=aarch64-qcom-linux-g++` explicitly.
+10. **CC/CXX may be empty** — `source environment-setup-*-qcom-linux` may not set CC/CXX via plink batch mode. This is normal — the host compiler is on PATH. If cmake fails to find the compiler, pass `-DCMAKE_C_COMPILER=aarch64-qcom-linux-gcc -DCMAKE_CXX_COMPILER=aarch64-qcom-linux-g++` explicitly.
 11. **pscp multi-file loops** — pscp does not support wildcards or multiple source args. Loop:
     ```bash
     for f in file1 file2 file3; do pscp -pw <PW> -hostkey "<HK>" "$f" user@host:dest/; done

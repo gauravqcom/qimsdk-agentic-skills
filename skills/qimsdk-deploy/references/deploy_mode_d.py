@@ -11,7 +11,7 @@ Mode D targets the qimsdk-cpp-app-builder artifact contract:
   <qti/qimsdk.h> C++ API, linking a single qimsdk-app-builder library.
 
 It is the C++-SDK sibling of Mode C (which builds gstreamer-app-builder C sample
-apps inside the gst-plugins-imsdk source tree). Mode D instead cross-builds each
+apps inside the qimsdk source tree). Mode D instead cross-builds each
 app OUT OF TREE as a standalone SDK consumer against the Yocto standard SDK, so
 no shared source tree is mutated. See workspace_setup_d.py for the build recipe.
 

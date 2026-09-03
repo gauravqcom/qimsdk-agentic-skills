@@ -9,7 +9,7 @@ Handles all workspace states (0-4) for host build on a Linux x86_64 Linux workst
 
 State transitions:
   0 → 1: Download and install SDK (via wget on Linux workstation from codelinaro.org)
-  1 → 2: git clone https://github.com/qualcomm/gst-plugins-imsdk.git
+  1 → 2: git clone https://github.com/qualcomm/qimsdk.git
   2 → 3: cmake configure (. env_setup && cmake -B build -S . -DENABLE_GST_SAMPLE_APPS=1 ...)
   3 → 4: Push source to gst-sample-apps/{binary}/, cmake --build build --target {binary}
   4:     Push source (may have changed), cmake --build --target (incremental, fast)
@@ -32,7 +32,7 @@ import pathlib
 # Ensure workspace_state (same directory) is importable
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-from workspace_state import detect_mode_c_state, _run as _ws_run
+from workspace_state import detect_mode_c_state, _find_sdk_env_script, _run as _ws_run
 
 
 # ── cmake flags (verbatim from yocto-build.mdx) ──────────────────────────────
@@ -45,7 +45,19 @@ _CMAKE_FLAGS = (
     '-DENABLE_GST_SAMPLE_APPS=1 '
     '-DENABLE_GST_SAMPLE_APPS_CAMERA=1 '
     '-DENABLE_GST_PLUGIN_TOOLS=1 '
-    '-DENABLE_GST_CAMERA_PLUGINS=1'
+    '-DENABLE_GST_CAMERA_PLUGINS=1 '
+    '-DENABLE_APP_BUILDER_CPP=1 '
+    '-DENABLE_APP_BUILDER_PYTHON=1'
+)
+
+# Base libraries (e.g. qimsdk-smartvenc) must be built + installed into the SDK
+# sysroot BEFORE the main plugins/sample-apps configure — gst-plugin-smartvencbin's
+# pkg_check_modules(qimsdk-smartvenc) resolves against $SDKTARGETSYSROOT, which the
+# downloaded SDK zip does not ship. Without this step, cmake configure for `build`
+# fails with "The following required packages were not found: - qimsdk-smartvenc".
+_CMAKE_BASE_FLAGS = (
+    '-DCMAKE_INSTALL_PREFIX=/usr '
+    '-DENABLE_GST_PLUGIN_BASE=1'
 )
 
 # SDK download: detect arch on Linux workstation and download from codelinaro.org
@@ -54,8 +66,9 @@ _CMAKE_FLAGS = (
 _SDK_BASE_URL = 'https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a'
 _SDK_ZIP_NAME_X86_64  = 'x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip'
 _SDK_ZIP_NAME_AARCH64 = 'arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip'
-_SDK_SUBDIR   = 'images/qcom-armv8a/sdk'
-_IMSDK_REPO   = 'https://github.com/qualcomm/gst-plugins-imsdk.git'
+_SDK_SUBDIR   = 'qcom-sdk'  # Yocto SDK install dir; env script name is version-specific, discovered by glob
+_IMSDK_REPO   = 'https://github.com/qualcomm/qimsdk.git'
+_GST_SUBDIR   = 'gstreamer'  # gst-plugin-base, gst-sample-apps etc. live under this in the new repo layout
 
 
 def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
@@ -73,9 +86,9 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
                        already extracted). Only consulted at state 0. If not set, falls
                        back to the existing arch-zip-lookup + wget-from-codelinaro.org flow.
         imsdk_path   : optional absolute path on the workstation to an existing
-                       gst-plugins-imsdk clone. When set, used as imsdk_dir directly and
+                       qimsdk clone. When set, used as imsdk_dir directly and
                        the git clone step is skipped entirely. If not set, falls back to
-                       cloning into {build_dir}/gst-plugins-imsdk.
+                       cloning into {build_dir}/qimsdk.
 
     Returns dict with keys: success, imsdk_dir, binary_path, build_log, failure_reason
     """
@@ -106,7 +119,7 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
     state_info = detect_mode_c_state(ssh_dc, bd, binary_name, imsdk_path=imsdk_override)
     state = state_info['state']
     env_script = state_info.get('env_script')
-    imsdk_dir  = state_info.get('imsdk_dir') or imsdk_override or f'{bd}/gst-plugins-imsdk'
+    imsdk_dir  = state_info.get('imsdk_dir') or imsdk_override or f'{bd}/qimsdk'
     print(f'  [setup_c] Workspace state {state}: {state_info["detail"]}', flush=True)
 
     # ── State 0: SDK not installed ────────────────────────────────────────────
@@ -135,20 +148,20 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
                 f'correct and the repo is fully present on the workstation.'
             )
 
-        print(f'  [setup_c] State 1 — cloning gst-plugins-imsdk into {bd}/ ...', flush=True)
+        print(f'  [setup_c] State 1 — cloning qimsdk into {bd}/ ...', flush=True)
         # Guard: if dir exists but is incomplete (partial clone), remove it first
-        imsdk_partial = f'{bd}/gst-plugins-imsdk'
+        imsdk_partial = f'{bd}/qimsdk'
         partial_check = _run(f'test -d {imsdk_partial} && test ! -f {imsdk_partial}/CMakeLists.txt && echo PARTIAL || echo OK')
         if 'PARTIAL' in partial_check:
-            print(f'  [setup_c] Removing incomplete gst-plugins-imsdk dir before re-clone ...', flush=True)
+            print(f'  [setup_c] Removing incomplete qimsdk dir before re-clone ...', flush=True)
             _run(f'rm -rf {imsdk_partial}', timeout=30)
 
         out = _run(f'cd {bd} && git clone {_IMSDK_REPO}', timeout=120)
         build_log_parts.append(f'[git clone]\n{out}')
-        exists = _run(f'test -f {bd}/gst-plugins-imsdk/CMakeLists.txt && echo YES || echo NO')
+        exists = _run(f'test -f {bd}/qimsdk/CMakeLists.txt && echo YES || echo NO')
         if 'YES' not in exists:
-            return _fail(f'git clone did not create gst-plugins-imsdk/CMakeLists.txt. Output: {out[:500]}')
-        imsdk_dir = f'{bd}/gst-plugins-imsdk'
+            return _fail(f'git clone did not create qimsdk/CMakeLists.txt. Output: {out[:500]}')
+        imsdk_dir = f'{bd}/qimsdk'
         print(f'  [setup_c] Repo cloned at {imsdk_dir}', flush=True)
 
         state_info = detect_mode_c_state(ssh_dc, bd, binary_name, imsdk_path=imsdk_override)
@@ -158,21 +171,37 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
     # ── State 2: repo cloned, cmake not run ──────────────────────────────────
     if state == 2:
         if not env_script:
-            env_script = f'{bd}/{_SDK_SUBDIR}/environment-setup-armv8a-qcom-linux'
+            env_script = _find_sdk_env_script(ssh_dc, f'{bd}/{_SDK_SUBDIR}')
         if not _run('which cmake 2>/dev/null', timeout=10):
             print('  [setup_c] cmake not found — installing ...', flush=True)
             _run('sudo DEBIAN_FRONTEND=noninteractive apt-get install -y cmake', timeout=120)
+
+        print(f'  [setup_c] State 2 — building + installing base libraries into SDK sysroot ...', flush=True)
+        _run(f'rm -rf {imsdk_dir}/{_GST_SUBDIR}/build-base', timeout=30)
+        base_cmd = (
+            f"bash -c '. {env_script} && "
+            f"cd {imsdk_dir}/{_GST_SUBDIR} && "
+            f"cmake -B build-base -S . {_CMAKE_BASE_FLAGS} && "
+            f"cmake --build build-base && "
+            f'DESTDIR="$SDKTARGETSYSROOT" cmake --install build-base --prefix /usr 2>&1\''
+        )
+        out = _run(base_cmd, timeout=300)
+        build_log_parts.append(f'[cmake base libraries]\n{out}')
+        if 'Install the project' not in out and 'Installing:' not in out and '-- Install configuration' not in out:
+            return _fail(f'Base libraries build/install did not complete. See build_log.')
+        print(f'  [setup_c] Base libraries installed to SDK sysroot', flush=True)
+
         print(f'  [setup_c] State 2 — running cmake configure ...', flush=True)
         # Wipe stale build dir to avoid reusing a corrupt CMakeCache.txt from prior interrupted run
-        _run(f'rm -rf {imsdk_dir}/build', timeout=30)
+        _run(f'rm -rf {imsdk_dir}/{_GST_SUBDIR}/build', timeout=30)
         cmake_cmd = (
             f"bash -c '. {env_script} && "
-            f"cd {imsdk_dir} && "
+            f"cd {imsdk_dir}/{_GST_SUBDIR} && "
             f"cmake -B build -S . {_CMAKE_FLAGS} 2>&1'"
         )
         out = _run(cmake_cmd, timeout=300)
         build_log_parts.append(f'[cmake configure]\n{out}')
-        exists = _run(f'test -f {imsdk_dir}/build/Makefile && echo YES || echo NO')
+        exists = _run(f'test -f {imsdk_dir}/{_GST_SUBDIR}/build/Makefile && echo YES || echo NO')
         if 'YES' not in exists:
             return _fail(f'cmake configure did not produce build/Makefile. See build_log.')
         print(f'  [setup_c] cmake configure OK', flush=True)
@@ -184,9 +213,9 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
     # ── States 3 and 4: cmake configured — push source and build ─────────────
     if state in (3, 4):
         if not env_script:
-            env_script = f'{bd}/{_SDK_SUBDIR}/environment-setup-armv8a-qcom-linux'
+            env_script = _find_sdk_env_script(ssh_dc, f'{bd}/{_SDK_SUBDIR}')
 
-        app_dir_dc = f'{imsdk_dir}/gst-sample-apps/{binary_name}'
+        app_dir_dc = f'{imsdk_dir}/{_GST_SUBDIR}/gst-sample-apps/{binary_name}'
 
         # Clean and push source files
         print(f'  [setup_c] Pushing source to Linux workstation {app_dir_dc}/ ...', flush=True)
@@ -196,16 +225,16 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
             return _fail(reason)
 
         # Clean prior build artifacts for this target (stale .o files from old source)
-        build_target_dir = f'{imsdk_dir}/build/gst-sample-apps/{binary_name}'
+        build_target_dir = f'{imsdk_dir}/{_GST_SUBDIR}/build/gst-sample-apps/{binary_name}'
         _run(f"rm -rf '{build_target_dir}'", timeout=15)
 
     # ── Build ─────────────────────────────────────────────────────────────────
     if not env_script:
-        env_script = f'{bd}/{_SDK_SUBDIR}/environment-setup-armv8a-qcom-linux'
+        env_script = _find_sdk_env_script(ssh_dc, f'{bd}/{_SDK_SUBDIR}')
     print(f'  [setup_c] Host-building {binary_name} (cmake --build) ...', flush=True)
     build_cmd = (
         f"bash -c '. {env_script} && "
-        f"cd {imsdk_dir} && "
+        f"cd {imsdk_dir}/{_GST_SUBDIR} && "
         f"cmake -B build -S . {_CMAKE_FLAGS} && "
         f"cmake --build build --target {binary_name} -- -j$(nproc) 2>&1'"
     )
@@ -217,7 +246,7 @@ def setup_and_build_c(ssh_dc, artifact_path, binary_name, build_dir,
     print(f'  [setup_c] Host build OK', flush=True)
 
     # Verify binary exists on linux_workstation
-    binary_path = f'{imsdk_dir}/build/gst-sample-apps/{binary_name}/{binary_name}'
+    binary_path = f'{imsdk_dir}/{_GST_SUBDIR}/build/gst-sample-apps/{binary_name}/{binary_name}'
     exists = _run(f'test -f {binary_path} && echo YES || echo NO')
     if 'YES' not in exists:
         return _fail(f'Binary not found at {binary_path} after host build')
@@ -246,7 +275,7 @@ def _install_sdk(ssh_dc, build_dir, sdk_path=None):
       3. wget from codelinaro.org (~3.5 GB). If that also fails (403, network
          blocked), reports clear manual download instructions.
 
-    SDK is installed into {build_dir}/images/qcom-armv8a/sdk/.
+    SDK is installed into {build_dir}/qcom-sdk/.
 
     Returns (success: bool, reason: str, log: str).
     """
@@ -304,9 +333,9 @@ def _install_sdk(ssh_dc, build_dir, sdk_path=None):
         if not sdk_path.lower().endswith('.sh'):
             _run(f'rm -rf {unzip_tmp}', timeout=10)
 
-        env_script = f'{install_dir}/environment-setup-armv8a-qcom-linux'
-        if 'YES' not in _run(f'test -f {env_script} && echo YES || echo NO'):
-            return False, f'Installer ran but env script not found at {env_script}. See build_log.', '\n\n'.join(log_parts)
+        env_script = _find_sdk_env_script(ssh_dc, install_dir)
+        if not env_script:
+            return False, f'Installer ran but no environment-setup-*-qcom-linux found under {install_dir}. See build_log.', '\n\n'.join(log_parts)
 
         print(f'  [setup_c] SDK installed at {install_dir}', flush=True)
         return True, 'ok', '\n\n'.join(log_parts)
@@ -373,9 +402,9 @@ def _install_sdk(ssh_dc, build_dir, sdk_path=None):
     log_parts.append(f'[sdk install]\n{out}')
     _run(f'rm -rf {unzip_tmp}', timeout=10)
 
-    env_script = f'{install_dir}/environment-setup-armv8a-qcom-linux'
-    if 'YES' not in _run(f'test -f {env_script} && echo YES || echo NO'):
-        return False, f'Installer ran but env script not found at {env_script}. See build_log.', '\n\n'.join(log_parts)
+    env_script = _find_sdk_env_script(ssh_dc, install_dir)
+    if not env_script:
+        return False, f'Installer ran but no environment-setup-*-qcom-linux found under {install_dir}. See build_log.', '\n\n'.join(log_parts)
 
     print(f'  [setup_c] SDK installed at {install_dir}', flush=True)
     return True, 'ok', '\n\n'.join(log_parts)
