@@ -974,7 +974,7 @@ def check_qimsdk_sdk_env(host, user, key_path, build_dir, password=None, timeout
             client,
             f"bash -c '. {env_script} && "
             f'echo CXX=$CXX && '
-            f'"$CXX" --version 2>&1 | head -1 && '
+            f'$CXX --version 2>&1 | head -1 && '
             f'echo SYSROOT=$SDKTARGETSYSROOT && '
             f'ls "$SDKTARGETSYSROOT"/usr/lib/libqimsdk-app-builder.so* 2>/dev/null | head -1 && '
             f'(find "$SDKTARGETSYSROOT" -name qimsdk.h 2>/dev/null | head -1)\'',
