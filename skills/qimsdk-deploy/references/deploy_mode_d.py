@@ -16,7 +16,7 @@ app OUT OF TREE as a standalone SDK consumer against the Yocto standard SDK, so
 no shared source tree is mutated. See workspace_setup_d.py for the build recipe.
 
 Mode D uses TWO SSH connections (identical pattern to Mode C):
-  - ssh_dc  : key/password connection to the Linux/WSL workstation (x86_64 host)
+  - ssh_dc  : key/password connection to the Linux/WSL workstation (x86_64 or aarch64, arch auto-detected)
   - ssh_dev : key/password connection to the QLI device (same as Mode A/B/C)
 
 Usage:

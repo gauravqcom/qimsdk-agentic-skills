@@ -101,7 +101,7 @@ gi.require_version("GstQtiML", "1.0")
 from gi.repository import GLib, Gst, GstQtiML
 ```
 
-If `GstQtiML-1.0.typelib` is missing on the target device, functional custom postprocess apps fail early at import time, and placeholder apps that use `MLPostprocess.set_handler(...)` fail later when qimsdk tries to connect the corresponding `process-*` signal. Mention this dependency in README `Assumptions` or `Steps to Run on QLI`.
+If `GstQtiML-1.0.typelib` is missing on the target device, functional custom postprocess apps fail early at import time, and placeholder apps that use `MLPostprocess.set_handler(...)` fail later when qimsdk tries to connect the corresponding `process-*` signal. Mention this dependency in README `Assumptions` or `Steps to Run`.
 
 Use `MLPostprocess`:
 

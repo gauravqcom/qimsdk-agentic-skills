@@ -47,16 +47,16 @@ Optional only when needed:
 - `Pipeline Flow` section derived from generated code, with `Text Summary` and `Mermaid Diagram` subsections
 - User-edit placeholders (model, labels, media paths, runtime flags)
 - `Steps to Compile`: exactly the line `Yocto: https://imsdkdocs.qualcomm.com/advanced/yocto-build#steps-to-build-custom-application` — no build/CMake commands, no other text
-- `Steps to Run on QLI`: first confirm all models, labels, media, and other referenced files are present on the device, then `scp` the compiled binary to the device, `ssh` in, `chmod +x` it, and run it
+- `Steps to Run`: first confirm all models, labels, media, and other referenced files are present on the device, then `scp` the compiled binary to the device, `ssh` in, `chmod +x` it, and run it
 - Assumptions and limitations
 - Custom preprocess TODOs, when generated
 - Custom postprocess TODOs, when generated
 
 If a `qticamsrc`/`qtiqmmfsrc` camera app defaults omitted camera caps to `1920x1080 @ 30fps`, README assumptions must call out that default explicitly.
 
-## Runtime Setup for Steps to Run on QLI
+## Runtime Setup for Steps to Run
 
-Before writing README `Steps to Run on QLI`, inspect the actual generated `main.cc` and determine which of these apply:
+Before writing README `Steps to Run`, inspect the actual generated `main.cc` and determine which of these apply:
 
 - If one or more stages explicitly selects the GPU delegate (`.set("delegate", "gpu")` on a discrete filter/inference stage, or `.set("inference-delegate", "gpu")` on an ML-bin stage — not for HTP/NPU external delegate selections), include `export OCL_ICD_FILENAMES=/usr/lib/libOpenCL_adreno.so.1`.
 - If the app has a high-scale/concurrency topology (multiple independent, concurrently active input streams — multistream fan-out, an AI wall of separate source streams, or genuine multi-stream batched inference across multiple sources; not a single input stream even with multiple parallel AI branches, a daisy-chain, or a display grid), include `ulimit -n 10000`.
@@ -85,7 +85,7 @@ When the app constructs a pipeline with YAML text, for example `qti::Pipeline pi
 - Generate the YAML config file in the artifact unless the user explicitly says an external YAML is already supplied and should not be generated.
 - If the user explicitly says the YAML file already exists or is provided externally, do not generate it; put the exact phrase `External YAML provided by user` in README assumptions.
 - Preserve the user-provided YAML target path in code or command-line examples when supplied.
-- If the generated YAML is stored under the artifact, include `Steps to Run on QLI` commands that create the target directory and copy the YAML to the target path before the `./<binary-name>` run command.
+- If the generated YAML is stored under the artifact, include `Steps to Run` commands that create the target directory and copy the YAML to the target path before the `./<binary-name>` run command.
 - If model, label, media, or settings paths are missing, put explicit placeholders in the YAML and list them in README.
 - The YAML root must be `pipeline:`, with `elements:` and `links:` sections matching the SDK parser.
 - Every `pipeline.elements` item must use `type:` and `name:`. For normal GStreamer elements, `type:` is the factory name, for example `type: qticamsrc`; do not emit a separate `factory:` key.
@@ -97,30 +97,30 @@ When the app constructs a pipeline with YAML text, for example `qti::Pipeline pi
 - Include `## Pipeline Flow` with a concise text summary of actual element order and branch paths from code.
 - Include `### Text Summary` immediately before the text summary.
 - Include `### Mermaid Diagram` immediately before a fenced Mermaid diagram using a `mermaid` code fence.
-- Include `## Steps to Compile` immediately before `## Steps to Run on QLI`, containing exactly one line: `Yocto: https://imsdkdocs.qualcomm.com/advanced/yocto-build#steps-to-build-custom-application`. Do not add CMake commands, build directories, or any other compile instructions under this heading.
-- Include `## Steps to Run on QLI` for runtime commands. As the first line, always state that all models, labels, media, and any other files the app references must already be present on the device at their referenced paths before running. Then show the scp/ssh/chmod/run sequence to get the compiled binary onto the QLI device and execute it, substituting the artifact's actual `TEST_TARGET` binary name for `<binary-name>` (never leave the literal placeholder text `<binary-name>` in the generated README) and keeping `<device-ip>` as an explicit unresolved placeholder. The applicable `&&`-chained env-setup block (omit if no command-based prerequisite row applies) runs ON THE DEVICE, after `ssh` and before `chmod`/the run command — never on the host before `scp`:
+- Include `## Steps to Compile` immediately before `## Steps to Run`, containing exactly one line: `Yocto: https://imsdkdocs.qualcomm.com/advanced/yocto-build#steps-to-build-custom-application`. Do not add CMake commands, build directories, or any other compile instructions under this heading.
+- Include `## Steps to Run` for runtime commands. As the first line, always state that all models, labels, media, and any other files the app references must already be present on the device at their referenced paths before running. Then show the scp/ssh/chmod/run sequence to get the compiled binary onto the device and execute it, substituting the artifact's actual `TEST_TARGET` binary name for `<binary-name>` (never leave the literal placeholder text `<binary-name>` in the generated README) and keeping `<user>` and `<device-ip>` as explicit unresolved placeholders. The applicable `&&`-chained env-setup block (omit if no command-based prerequisite row applies) runs ON THE DEVICE, after `ssh` and before `chmod`/the run command — never on the host before `scp`:
   ```bash
   # Copy the app to device
-  scp <binary-name> root@<device-ip>:/root/
+  scp <binary-name> <user>@<device-ip>:~/
 
   # SSH into device and run
-  ssh root@<device-ip>
-  chmod +x /root/<binary-name>
+  ssh <user>@<device-ip>
+  chmod +x ~/<binary-name>
   ./<binary-name>
   ```
-  When a command-based prerequisite applies, insert the env-setup block between `ssh root@<device-ip>` and `chmod +x /root/<binary-name>`, for example:
+  When a command-based prerequisite applies, insert the env-setup block between `ssh <user>@<device-ip>` and `chmod +x ~/<binary-name>`, for example:
   ```bash
   # Copy the app to device
-  scp <binary-name> root@<device-ip>:/root/
+  scp <binary-name> <user>@<device-ip>:~/
 
   # SSH into device and run
-  ssh root@<device-ip>
+  ssh <user>@<device-ip>
   export OCL_ICD_FILENAMES=/usr/lib/libOpenCL_adreno.so.1 && \
   ulimit -n 10000 && \
   WS=$(find /run -maxdepth 3 -name "wayland-*" ! -name "*.lock" 2>/dev/null | head -1) && \
   export XDG_RUNTIME_DIR=$(dirname "$WS") && \
   export WAYLAND_DISPLAY=$(basename "$WS")
-  chmod +x /root/<binary-name>
+  chmod +x ~/<binary-name>
   ./<binary-name>
   ```
   If `main.cc` uses a camera (`qticamsrc`/`qtiqmmfsrc`/`v4l2src`), consumes an RTSP input, or reads from `filesrc`/another file-backed source, add a short prose note (not a shell export) immediately after the run command stating the corresponding readiness requirement: camera/`cam-server` availability, an upstream RTSP producer already running, or the input file(s) existing at their referenced paths.

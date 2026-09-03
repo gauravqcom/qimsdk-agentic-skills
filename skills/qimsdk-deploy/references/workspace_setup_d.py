@@ -7,8 +7,8 @@ workspace_setup_d.py — Idempotent Mode D workspace setup and standalone app bu
 
 Mode D cross-builds a qimsdk-cpp-app-builder C++ app (main.cc using the
 qti::Pipeline / <qti/qimsdk.h> C++ API) against the Yocto standard SDK on a
-Linux or WSL x86_64 workstation, then the deploy script ships the ARM64 binary
-to the QLI device.
+Linux or WSL workstation (x86_64 or aarch64 — arch is auto-detected, same as
+Mode C), then the deploy script ships the ARM64 binary to the QLI device.
 
 Contrast with Mode C (gstreamer-app-builder C sample apps):
   - Mode C clones gst-plugins-imsdk and builds the app INSIDE that source tree.
@@ -47,7 +47,8 @@ No imports from deploy_mode_d — SSH helper duplicated to avoid circular import
 
 The SDK source is configurable via LINUX_WORKSTATION_SDK_URL in configs/.env.
 It may be a file:// path (e.g. a network share) or an http(s):// URL. If unset,
-the default Yocto SDK zip is downloaded from the Artifactory URL below.
+the default Yocto SDK zip for the detected workstation arch is downloaded from
+the Artifactory base URL below.
 """
 
 import os
@@ -66,12 +67,17 @@ _SDK_INSTALL_SUBDIR = 'qcom-sdk'          # {build_dir}/qcom-sdk  (installer -d 
 _CPP_APPS_SUBDIR    = 'qimsdk-cpp-apps'   # {build_dir}/qimsdk-cpp-apps/{target}/
 
 # Default SDK source used when no explicit SDK path/URL or build-dir zip exists.
-# The Artifactory directory contains the Yocto SDK package; download the zip and
-# extract its installer on the workstation.
-_SDK_DEFAULT_URL = (
+# The Artifactory directory contains the Yocto SDK package, one zip per workstation
+# arch — detected via `uname -m` on the workstation, same approach as Mode C.
+_SDK_BASE_URL = (
     'https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/'
-    'meta-qcom/qcom-armv8a/qcom-yocto-sdk-deploy-0807.zip'
+    'meta-qcom/qcom-distro/qcom-armv8a'
 )
+
+# Arch-specific SDK zip filenames served under _SDK_BASE_URL — one per
+# workstation arch (mirrors Mode C's arch_zip_name lookup in workspace_setup_c.py).
+_SDK_ZIP_NAME_X86_64  = 'x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip'
+_SDK_ZIP_NAME_AARCH64 = 'arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip'
 
 # Wrapper CMakeLists.txt for a standalone SDK-consumer build.
 #
@@ -256,9 +262,12 @@ def _install_sdk(ssh_dc, build_dir, sdk_dir, sdk_url, sdk_path=None):
          installer already present: a .sh (already extracted, run directly) or
          a .zip (unzipped automatically to find the installer inside). Skips
          the build_dir zip lookup and sdk_url fetch entirely.
-      2. A zip already present in {build_dir} (qcom-yocto-sdk*.zip or sdk.zip)
+      2. A zip already present in {build_dir} (qcom-yocto-sdk*.zip, sdk.zip, or
+         the arch-specific zip name for the detected workstation arch)
       3. sdk_url (file:// path or http(s):// URL) fetched into {build_dir}
-      4. The default Yocto SDK zip from Artifactory fetched into {build_dir}
+      4. The default Yocto SDK zip from Artifactory for the detected
+         workstation arch (via `uname -m`, same approach as Mode C), fetched
+         into {build_dir}
 
     Steps: ensure unzip/cmake → unzip package → run the .sh installer with
     `-d {sdk_dir} -y` → verify environment-setup-*-qcom-linux exists.
@@ -328,18 +337,28 @@ def _install_sdk(ssh_dc, build_dir, sdk_dir, sdk_url, sdk_path=None):
     # ── No sdk_path — existing zip-lookup + sdk_url fetch flow ─────────────────
     # ── Ensure unzip is available (best effort) ───────────────────────────────
     # cmake is NOT installed here — the Yocto SDK ships cmake inside its own
-    # x86_64 host sysroot (sysroots/x86_64-qcomsdk-linux/usr/bin/cmake) and
-    # puts it on PATH when the environment-setup script is sourced. Attempting
-    # a system cmake install via apt is unnecessary and silently fails on most
+    # host sysroot (e.g. sysroots/x86_64-qcomsdk-linux/usr/bin/cmake) and puts
+    # it on PATH when the environment-setup script is sourced. Attempting a
+    # system cmake install via apt is unnecessary and silently fails on most
     # workstations that lack passwordless sudo.
     if not _run('which unzip 2>/dev/null'):
         print('  [setup_d] unzip not found — installing (best effort) ...', flush=True)
         apt_out = _run('sudo DEBIAN_FRONTEND=noninteractive apt-get install -y unzip', timeout=180)
         log_parts.append(f'[apt install unzip]\n{apt_out[:500]}')
 
+    # ── Detect workstation arch (same approach as Mode C's arch_zip_name) ─────
+    arch = _run('uname -m')
+    if 'x86_64' in arch:
+        arch_zip_name = _SDK_ZIP_NAME_X86_64
+    elif 'aarch64' in arch:
+        arch_zip_name = _SDK_ZIP_NAME_AARCH64
+    else:
+        return False, f'Unexpected Linux workstation arch: {arch!r}', ''
+    log_parts.append(f'[detect arch]\narch={arch}, arch_zip={arch_zip_name}')
+
     # ── Locate the SDK zip ─────────────────────────────────────────────────────
     existing = _run(
-        f"ls {build_dir}/qcom-yocto-sdk*.zip {build_dir}/sdk.zip 2>/dev/null | head -1"
+        f"ls {build_dir}/qcom-yocto-sdk*.zip {build_dir}/sdk.zip {build_dir}/{arch_zip_name} 2>/dev/null | head -1"
     ).strip()
     if existing:
         local_zip = existing.splitlines()[0].strip()
@@ -347,7 +366,7 @@ def _install_sdk(ssh_dc, build_dir, sdk_dir, sdk_url, sdk_path=None):
         log_parts.append(f'[zip lookup]\nFound at {local_zip}')
     else:
         if not sdk_url:
-            sdk_url = _SDK_DEFAULT_URL
+            sdk_url = f'{_SDK_BASE_URL}/{arch_zip_name}'
             print(f'  [setup_d] No local SDK zip or explicit URL — downloading the default Yocto SDK from Artifactory ...', flush=True)
             print(f'  [setup_d] URL: {sdk_url}', flush=True)
 

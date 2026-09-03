@@ -305,16 +305,16 @@ if [ -f "$README" ]; then
     check "README uses one ordered &&-chained runtime setup block" $RESULT
   fi
 
-  # Steps to Run on QLI must document the explicit scp/ssh/chmod/run sequence
-  # (see artifact-contract.md "Steps to Run on QLI").
-  grep -q '^## Steps to Run on QLI[[:space:]]*$' "$README" && RESULT=0 || RESULT=1
-  check "README includes '## Steps to Run on QLI' heading" $RESULT
+  # Steps to Run must document the explicit scp/ssh/chmod/run sequence
+  # (see artifact-contract.md "Steps to Run").
+  grep -q '^## Steps to Run[[:space:]]*$' "$README" && RESULT=0 || RESULT=1
+  check "README includes '## Steps to Run' heading" $RESULT
 
   grep -Eq '\bscp\b' "$README" && grep -Eq '\bssh\b' "$README" && grep -Eq 'chmod[[:space:]]+\+x' "$README" && grep -Eq '(^|[[:space:]])\./[A-Za-z0-9_-]+' "$README" && RESULT=0 || RESULT=1
-  check "README Steps to Run on QLI includes scp, ssh, chmod +x, and a ./<binary> run command" $RESULT
+  check "README Steps to Run includes scp, ssh, chmod +x, and a ./<binary> run command" $RESULT
 
   grep -q 'present on the device' "$README" && RESULT=0 || RESULT=1
-  check "README Steps to Run on QLI states models/labels/media files must be present on the device" $RESULT
+  check "README Steps to Run states models/labels/media files must be present on the device" $RESULT
 
   # Deployment step ordering: scp (host) -> ssh (enter device) -> env-setup
   # block (on-device, if applicable) -> chmod +x -> run.
@@ -322,15 +322,15 @@ if [ -f "$README" ]; then
   ssh_line="$(grep -n "^ssh " "$README" | head -1 | cut -d: -f1 || true)"
   chmod_line="$(grep -n "chmod +x" "$README" | head -1 | cut -d: -f1 || true)"
   [[ -n "$scp_line" && -n "$ssh_line" && "$ssh_line" -gt "$scp_line" ]] && RESULT=0 || RESULT=1
-  check "README Steps to Run on QLI runs ssh after scp, not before" $RESULT
+  check "README Steps to Run runs ssh after scp, not before" $RESULT
   [[ -n "$ssh_line" && -n "$chmod_line" && "$chmod_line" -gt "$ssh_line" ]] && RESULT=0 || RESULT=1
-  check "README Steps to Run on QLI runs chmod +x after ssh (on the device), not before" $RESULT
+  check "README Steps to Run runs chmod +x after ssh (on the device), not before" $RESULT
   if (( need_pulse || need_gpu || need_ulimit || need_wayland )); then
     env_marker_line="$(grep -nE "OCL_ICD_FILENAMES|ulimit[[:space:]]+-n[[:space:]]+10000|wpctl[[:space:]]+status|WS=\\\$\\(find" "$README" | head -1 | cut -d: -f1 || true)"
     [[ -n "$env_marker_line" && -n "$ssh_line" && "$env_marker_line" -gt "$ssh_line" ]] && RESULT=0 || RESULT=1
-    check "README Steps to Run on QLI env-setup block runs on the device (after ssh), not on the host before scp" $RESULT
+    check "README Steps to Run env-setup block runs on the device (after ssh), not on the host before scp" $RESULT
     [[ -n "$env_marker_line" && -n "$chmod_line" && "$env_marker_line" -lt "$chmod_line" ]] && RESULT=0 || RESULT=1
-    check "README Steps to Run on QLI env-setup block runs before chmod +x/the binary run command" $RESULT
+    check "README Steps to Run env-setup block runs before chmod +x/the binary run command" $RESULT
   fi
 else
   echo "[FAIL] README.md not found next to main.c at $README"

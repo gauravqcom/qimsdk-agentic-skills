@@ -223,7 +223,8 @@ def _find_sdk_env_script(ssh_dc, sdk_install_dir):
 
 def detect_mode_d_state(ssh_dc, build_dir, target_name=None):
     """
-    Detect Mode D workspace state on a Linux/WSL x86_64 workstation.
+    Detect Mode D workspace state on a Linux/WSL workstation (x86_64 or
+    aarch64 — arch is auto-detected, same as Mode C).
 
     Args:
         ssh_dc      : connected SSH object (paramiko client or _SSH instance)

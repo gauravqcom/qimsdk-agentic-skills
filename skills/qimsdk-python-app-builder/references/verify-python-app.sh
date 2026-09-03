@@ -71,10 +71,10 @@ grep -q "from qimsdk import" "$app" || fail "main.py must import from public qim
 grep -q "^## Pipeline Flow" "$readme" || fail "README.md missing '## Pipeline Flow' section"
 grep -q "^### Text Summary" "$readme" || fail "README.md missing '### Text Summary' heading"
 grep -q "^### Mermaid Diagram" "$readme" || fail "README.md missing '### Mermaid Diagram' heading"
-grep -q "^## Steps to Run on QLI" "$readme" || fail "README.md missing '## Steps to Run on QLI' section"
+grep -q "^## Steps to Run" "$readme" || fail "README.md missing '## Steps to Run' section"
 ! grep -q "PIPELINE_FLOW" "$readme" || fail "README.md should use 'Pipeline Flow', not 'PIPELINE_FLOW'"
-! grep -q "^## Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run on QLI', not '## Run'"
-! grep -Eq "^## Steps to Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run on QLI', not '## Steps to Run'"
+! grep -q "^## Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run', not '## Run'"
+! grep -Eq "^## Steps to Run on QLI[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run', not '## Steps to Run on QLI'"
 grep -q '```mermaid' "$readme" || fail "README.md Mermaid Diagram must include a fenced Mermaid diagram"
 grep -Eq "flowchart (LR|TD)" "$readme" || fail "README.md Mermaid diagram must declare flowchart LR or flowchart TD"
 grep -Eq "^def create_and_execute_pipeline\\(" "$app" || fail "main.py must define create_and_execute_pipeline(...)"
@@ -98,20 +98,20 @@ has_multistream_topology && need_ulimit=1
 grep -q "waylandsink" "$app" && need_wayland=1
 if (( need_pulse )); then
   grep -q "wpctl status" "$readme" \
-    || fail "README.md Steps to Run on QLI must include 'wpctl status' for pulsesrc/pulsesink apps"
+    || fail "README.md Steps to Run must include 'wpctl status' for pulsesrc/pulsesink apps"
   grep -q "wpctl set-default <node_no.>" "$readme" \
-    || fail "README.md Steps to Run on QLI must include 'wpctl set-default <node_no.>' for pulsesrc/pulsesink apps"
+    || fail "README.md Steps to Run must include 'wpctl set-default <node_no.>' for pulsesrc/pulsesink apps"
 fi
 if (( need_pulse || need_gpu || need_ulimit || need_wayland )); then
   readme_setup_block_valid "$need_pulse" "$need_gpu" "$need_ulimit" "$need_wayland" || fail "README.md must put applicable runtime setup in one ordered &&-chained bash block"
 fi
 
-grep -q "scp" "$readme" || fail "README.md Steps to Run on QLI must include an 'scp' command to copy the app to device"
-grep -q "ssh" "$readme" || fail "README.md Steps to Run on QLI must include an 'ssh' command to reach the device"
+grep -q "scp" "$readme" || fail "README.md Steps to Run must include an 'scp' command to copy the app to device"
+grep -q "ssh" "$readme" || fail "README.md Steps to Run must include an 'ssh' command to reach the device"
 grep -Eq "python3[[:space:]].*main\\.py" "$readme" \
-  || fail "README.md Steps to Run on QLI must include a 'python3 .../main.py' run command"
+  || fail "README.md Steps to Run must include a 'python3 .../main.py' run command"
 grep -q "present on the device" "$readme" \
-  || fail "README.md Steps to Run on QLI must state that models/labels/media files are present on the device"
+  || fail "README.md Steps to Run must state that models/labels/media files are present on the device"
 
 # Deployment step ordering: scp (host) -> ssh (enter device) -> env-setup
 # block (on-device, if applicable) -> python3 run. The env-setup block must
@@ -120,15 +120,15 @@ scp_line="$(grep -n "^scp " "$readme" | head -1 | cut -d: -f1 || true)"
 ssh_line="$(grep -n "^ssh " "$readme" | head -1 | cut -d: -f1 || true)"
 run_line="$(grep -nE "python3[[:space:]].*main\\.py" "$readme" | head -1 | cut -d: -f1 || true)"
 [[ -n "$scp_line" && -n "$ssh_line" && "$ssh_line" -gt "$scp_line" ]] \
-  || fail "README.md Steps to Run on QLI must ssh after scp, not before"
+  || fail "README.md Steps to Run must ssh after scp, not before"
 [[ -n "$ssh_line" && -n "$run_line" && "$run_line" -gt "$ssh_line" ]] \
-  || fail "README.md Steps to Run on QLI must run python3 after ssh (on the device), not before"
+  || fail "README.md Steps to Run must run python3 after ssh (on the device), not before"
 if (( need_pulse || need_gpu || need_ulimit || need_wayland )); then
   env_marker_line="$(grep -nE "OCL_ICD_FILENAMES|ulimit[[:space:]]+-n[[:space:]]+10000|wpctl[[:space:]]+status|WS=\\\$\\(find" "$readme" | head -1 | cut -d: -f1 || true)"
   [[ -n "$env_marker_line" && -n "$ssh_line" && "$env_marker_line" -gt "$ssh_line" ]] \
-    || fail "README.md Steps to Run on QLI env-setup block must run on the device (after ssh), not on the host before scp"
+    || fail "README.md Steps to Run env-setup block must run on the device (after ssh), not on the host before scp"
   [[ -n "$env_marker_line" && -n "$run_line" && "$env_marker_line" -lt "$run_line" ]] \
-    || fail "README.md Steps to Run on QLI env-setup block must run before the python3 run command"
+    || fail "README.md Steps to Run env-setup block must run before the python3 run command"
 fi
 
 if grep -q "Pipeline\\.from_yaml" "$app"; then

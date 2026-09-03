@@ -1,6 +1,6 @@
 ---
 name: qimsdk-deploy
-description: "Deploy, build, run, and retrieve QIM SDK GStreamer C apps, gst-launch pipelines, QIM SDK C++ apps, and Python qimsdk apps on Qualcomm Linux devices. Five modes: Mode A (gst-launch — push and run directly, no build), Mode B (Ubuntu on-device build — QIMSDK source tree on device), Mode C (host build — gstreamer-app-builder C sample app, build on a Linux workstation (x86_64 or aarch64, arch auto-detected) using the host SDK, deploy to QLI device), Mode P (Python qimsdk app — push main.py and run, no build), Mode D (host build — cpp-app-builder C++ SDK app, standalone build against the Yocto SDK on a Linux x86_64/WSL workstation, deploy to QLI device). Returns structured result for eval scoring."
+description: "Deploy, build, run, and retrieve QIM SDK GStreamer C apps, gst-launch pipelines, QIM SDK C++ apps, and Python qimsdk apps on Qualcomm Linux devices. Five modes: Mode A (gst-launch — push and run directly, no build), Mode B (Ubuntu on-device build — QIMSDK source tree on device), Mode C (host build — gstreamer-app-builder C sample app, build on a Linux workstation (x86_64 or aarch64, arch auto-detected) using the host SDK, deploy to QLI device), Mode P (Python qimsdk app — push main.py and run, no build), Mode D (host build — cpp-app-builder C++ SDK app, standalone build against the Yocto SDK on a Linux workstation (x86_64 or aarch64, arch auto-detected), deploy to QLI device). Returns structured result for eval scoring."
 ---
 
 # QIM SDK Deploy Skill
@@ -112,7 +112,8 @@ Mode D requires on device:
 Note: Mode D deploy auto-provisions the Yocto SDK (unzip + run the installer into
 `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk`) if not already installed, then builds each app
 **standalone** (out of tree) against the installed SDK's target sysroot — no shared source tree
-is cloned or mutated, unlike Mode C. See "Mode D — C++ Standalone Host Build" below.
+is cloned or mutated, unlike Mode C. Workstation arch (x86_64 or aarch64) is auto-detected,
+same as Mode C. See "Mode D — C++ Standalone Host Build" below.
 
 **Preflight failure means deploy will fail.** Every [FAIL] in preflight output must be resolved before running deploy. Do not proceed with deploy if preflight exits non-zero.
 
@@ -285,27 +286,33 @@ All Mode C keys above are required. Preflight exits immediately with `[FAIL]` if
 **Mode D — adds (same LINUX_WORKSTATION_* keys as Mode C, no new required keys):**
 
 Mode D reuses every `LINUX_WORKSTATION_HOST/USER/KEY/PASSWORD/PORT/BUILD_DIR` key above — it targets
-the same class of Linux x86_64/WSL workstation, just with a different SDK (the Yocto standard SDK,
-not gst-plugins-imsdk). Optional additions:
+the same class of Linux workstation as Mode C (x86_64 or aarch64 — arch is auto-detected), just
+with a different SDK (the Yocto standard SDK, not gst-plugins-imsdk). Optional additions:
 
 | Key | What it is | How to find it | Example |
 |-----|-----------|---------------|---------|
-| `LINUX_WORKSTATION_SDK_URL` | Source for the Yocto SDK zip (installer .sh inside) | A `file://` path to a network share, or an `http(s)://` URL | `file:///mnt/share/qcom-yocto-sdk-deploy.zip` |
-| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to a Yocto SDK installer already present — a `.zip` (unzipped automatically to find the `.sh` installer inside) or a `.sh` (already extracted, run directly). Takes precedence over the build-dir zip lookup and `LINUX_WORKSTATION_SDK_URL`. Only consulted when the SDK is not yet installed; ignored otherwise. **Same key as Mode C** — set once, works for both modes. | `/local/mnt/sdk/qcom-yocto-sdk-deploy.zip` or `/local/mnt/sdk/installer.sh` |
+| `LINUX_WORKSTATION_SDK_URL` | Source for the Yocto SDK zip (installer .sh inside) | A `file://` path to a network share, or an `http(s)://` URL | `file:///mnt/share/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` |
+| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to a Yocto SDK installer already present — a `.zip` (unzipped automatically to find the `.sh` installer inside) or a `.sh` (already extracted, run directly). Takes precedence over the build-dir zip lookup and `LINUX_WORKSTATION_SDK_URL`. Only consulted when the SDK is not yet installed; ignored otherwise. **Same key as Mode C** — set once, works for both modes. | `/local/mnt/sdk/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` or `/local/mnt/sdk/installer.sh` |
 
-> If a `qcom-yocto-sdk*.zip` (or `sdk.zip`) is already present in `LINUX_WORKSTATION_BUILD_DIR`,
-> neither `LINUX_WORKSTATION_SDK_PATH` nor `LINUX_WORKSTATION_SDK_URL` is needed — deploy uses the
-> local zip. The SDK is installed once into `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reused for
-> every app. SDK source precedence: `LINUX_WORKSTATION_SDK_PATH` → build-dir zip → `LINUX_WORKSTATION_SDK_URL`
-> → default Artifactory zip:
-> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-armv8a/qcom-yocto-sdk-deploy-0807.zip`.
+> If a `qcom-yocto-sdk*.zip`, `sdk.zip`, or the arch-specific zip name (see below) is already
+> present in `LINUX_WORKSTATION_BUILD_DIR`, neither `LINUX_WORKSTATION_SDK_PATH` nor
+> `LINUX_WORKSTATION_SDK_URL` is needed — deploy uses the local zip. The SDK is installed once into
+> `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reused for every app. SDK source precedence:
+> `LINUX_WORKSTATION_SDK_PATH` → build-dir zip → `LINUX_WORKSTATION_SDK_URL` → default Artifactory
+> zip for the detected workstation arch (via `uname -m`, same as Mode C):
+> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+> (x86_64) or
+> `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+> (aarch64).
 
 **Ask the user during the Mode D wizard, right after `LINUX_WORKSTATION_BUILD_DIR`:**
 1. "Do you have the Yocto SDK installer already on the workstation (as a `.zip` or `.sh`)?"
    — if yes: "What is the path on the workstation?" → save as `LINUX_WORKSTATION_SDK_PATH`
-   — if no: deploy will download the default `qcom-yocto-sdk-deploy-0807.zip`
-     from the Artifactory URL on first deploy. If you need a different source,
-     set `LINUX_WORKSTATION_SDK_URL` to a `file://` path or `http(s)://` URL.
+   — if no: deploy will detect the workstation arch (`uname -m`) and download the matching
+     default Yocto SDK zip (`x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 or
+     `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64) from the Artifactory URL on first
+     deploy. If you need a different source, set `LINUX_WORKSTATION_SDK_URL` to a `file://` path
+     or `http(s)://` URL.
    (Mode D has no repo-clone step, so there is no `IMSDK_PATH` question — unlike Mode C.)
 
 **Mode P — same as Mode A (no extra keys needed):**
@@ -409,7 +416,7 @@ distinct choice, not to be merged or abbreviated when relaying to the user:**
 - **Mode A** — artifact is a `pipeline.sh` (gst-launch command). No build needed.
 - **Mode B** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is Ubuntu with QIMSDK source tree on-device.
 - **Mode C** — artifact has `main.c` + `set(GST_EXAMPLE_BIN ...)`, device is QLI 2.0 / host build (no build tools). Needs a Linux workstation (x86_64 or aarch64 — arch is auto-detected; WSL on either Windows x86_64 or Windows ARM works).
-- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/qimsdk.h>` (cpp-app-builder). Needs a Linux x86_64/WSL workstation (no arch auto-detection — the Yocto SDK zip in use is x86_64-only).
+- **Mode D** — artifact has `main.cc` + `set(TEST_TARGET ...)` using `qti::Pipeline` / `<qti/qimsdk.h>` (cpp-app-builder). Needs a Linux workstation (x86_64 or aarch64 — arch is auto-detected; WSL on either Windows x86_64 or Windows ARM works).
 - **Mode P** — artifact has `main.py` (or legacy `app.py`) using `qimsdk.Pipeline`. No build.
 
 Mode C and Mode D both host-build on a workstation and push a binary to the device, but they target
@@ -1088,11 +1095,11 @@ Use when: artifact is from **qimsdk-cpp-app-builder** — `main.cc` + `CMakeList
 gstreamer-app-builder's `main.c` + `GST_EXAMPLE_BIN` C sample apps) — do not confuse the two by
 CMake shape alone; check for `TEST_TARGET` (Mode D) vs `GST_EXAMPLE_BIN` (Mode C).
 
-Requires a Linux x86_64 or WSL workstation, same as Mode C — Mode D reuses every
-`LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D never clones or
-mutates a shared source tree.** Each app is cross-built **standalone, out of tree**, against the
-**Yocto standard SDK** (not gst-plugins-imsdk) — `libqimsdk-app-builder.so` ships inside the SDK's target
-sysroot, so there is no "build the C++ IMSDK SDK from source" step.
+Requires a Linux workstation (x86_64 or aarch64 — arch is auto-detected, same as Mode C) —
+Mode D reuses every `LINUX_WORKSTATION_*` key. The key structural difference from Mode C: **Mode D
+never clones or mutates a shared source tree.** Each app is cross-built **standalone, out of tree**,
+against the **Yocto standard SDK** (not gst-plugins-imsdk) — `libqimsdk-app-builder.so` ships inside
+the SDK's target sysroot, so there is no "build the C++ IMSDK SDK from source" step.
 
 **Script:** `references/deploy_mode_d.py` (build delegated to `references/workspace_setup_d.py`)
 
@@ -1102,10 +1109,13 @@ The SDK is installed once into `{LINUX_WORKSTATION_BUILD_DIR}/qcom-sdk` and reus
 If not already installed, deploy resolves the SDK source in this precedence order:
 1. `LINUX_WORKSTATION_SDK_PATH`, if set — an installer already on the workstation: a `.sh` (already
    extracted, run directly, no unzip) or a `.zip` (unzipped to find the `.sh` inside). Same key as Mode C.
-2. Else a `qcom-yocto-sdk*.zip` (or `sdk.zip`) already in `LINUX_WORKSTATION_BUILD_DIR`.
+2. Else a `qcom-yocto-sdk*.zip`, `sdk.zip`, or the arch-specific zip name (see below) already in
+   `LINUX_WORKSTATION_BUILD_DIR`.
 3. Else `LINUX_WORKSTATION_SDK_URL`, if set (`file://` path or `http(s)://` URL).
-4. Else the default Yocto SDK zip is downloaded from:
-   `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-armv8a/qcom-yocto-sdk-deploy-0807.zip`.
+4. Else the workstation arch is detected (`uname -m`, same as Mode C) and the matching default
+   Yocto SDK zip is downloaded:
+   - x86_64: `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
+   - aarch64: `https://artifacts.codelinaro.org/artifactory/qli-ci/flashable-binaries/meta-qcom/qcom-distro/qcom-armv8a/arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip`
 
 Then it unzips (if needed) to find the `.sh` installer, runs it non-interactively
 (`<installer>.sh -d <sdk_dir> -y`), and verifies an `environment-setup-*-qcom-linux` script exists
@@ -1309,3 +1319,6 @@ Fix: Do not add `add_subdirectory`. The `foreach` glob handles it — as long as
 12. **pscp long paths** — paths > ~230 chars fail silently on Windows. Always copy artifact files to `C:/tmp/` before pscp.
 13. **$HOME in C source** — `#define PATH "$HOME/media/..."` is a string literal in C; $HOME is never expanded at runtime. Manually replace `$HOME` with the actual device home directory (e.g. `/root`) in main.c before building.
 14. **Re-run cmake after adding new app subdirectory** — cmake discovers subdirs at configure time, not at build time. If a new app dir is added after cmake ran, re-run cmake before building.
+
+### Mode D (C++ standalone host build)
+1. **Yocto SDK zip must match the linux workstation arch** — `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch (`uname -m`) and picks the right zip automatically, same as Mode C.

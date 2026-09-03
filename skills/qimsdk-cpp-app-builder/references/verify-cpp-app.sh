@@ -74,10 +74,10 @@ grep -q "^### Mermaid Diagram" "$readme" || fail "README.md missing '### Mermaid
 grep -q "^## Steps to Compile" "$readme" || fail "README.md missing '## Steps to Compile' section"
 grep -q "Yocto: https://imsdkdocs.qualcomm.com/advanced/yocto-build#steps-to-build-custom-application" "$readme" \
   || fail "README.md Steps to Compile must contain the exact Yocto build link"
-grep -q "^## Steps to Run on QLI" "$readme" || fail "README.md missing '## Steps to Run on QLI' section"
+grep -Eq "^## Steps to Run[[:space:]]*$" "$readme" || fail "README.md missing '## Steps to Run' section"
 ! grep -q "PIPELINE_FLOW" "$readme" || fail "README.md should use 'Pipeline Flow', not 'PIPELINE_FLOW'"
-! grep -q "^## Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run on QLI', not '## Run'"
-! grep -Eq "^## Steps to Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run on QLI', not '## Steps to Run'"
+! grep -q "^## Run[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run', not '## Run'"
+! grep -Eq "^## Steps to Run on QLI[[:space:]]*$" "$readme" || fail "README.md should use '## Steps to Run', not '## Steps to Run on QLI'"
 grep -q '```mermaid' "$readme" || fail "README.md Mermaid Diagram must include a fenced Mermaid diagram"
 grep -Eq "flowchart (LR|TD)" "$readme" || fail "README.md Mermaid diagram must declare flowchart LR or flowchart TD"
 grep -q "qimsdk-app-builder" "$cmake" || fail "CMakeLists.txt must link qimsdk-app-builder"
@@ -87,16 +87,16 @@ if grep -q "filesink\\|mp4mux" "$main"; then
   grep -q "\\.eos(true)" "$main" || fail "file/mux output should call pipeline.eos(true)"
 fi
 
-grep -q "^scp .*root@<device-ip>:/root/" "$readme" \
-  || fail "README.md Steps to Run on QLI must include an scp command copying the binary to root@<device-ip>:/root/"
-grep -q "^ssh root@<device-ip>" "$readme" \
-  || fail "README.md Steps to Run on QLI must include an ssh command into root@<device-ip>"
-grep -q "chmod +x /root/" "$readme" \
-  || fail "README.md Steps to Run on QLI must include a chmod +x command for the deployed binary"
+grep -q "^scp .*<user>@<device-ip>:~/" "$readme" \
+  || fail "README.md Steps to Run must include an scp command copying the binary to <user>@<device-ip>:~/"
+grep -q "^ssh <user>@<device-ip>" "$readme" \
+  || fail "README.md Steps to Run must include an ssh command into <user>@<device-ip>"
+grep -q "chmod +x ~/" "$readme" \
+  || fail "README.md Steps to Run must include a chmod +x command for the deployed binary"
 grep -Eq "^\\./[A-Za-z0-9_.-]+[[:space:]]*$" "$readme" \
-  || fail "README.md Steps to Run on QLI must include a ./<binary-name> run command line"
+  || fail "README.md Steps to Run must include a ./<binary-name> run command line"
 grep -q "present on the device" "$readme" \
-  || fail "README.md Steps to Run on QLI must state that models/labels/media files are present on the device"
+  || fail "README.md Steps to Run must state that models/labels/media files are present on the device"
 
 need_pulse=0
 need_gpu=0
@@ -108,9 +108,9 @@ has_multistream_topology && need_ulimit=1
 grep -q "waylandsink" "$main" && need_wayland=1
 if (( need_pulse )); then
   grep -q "wpctl status" "$readme" \
-    || fail "README.md Steps to Run on QLI must include 'wpctl status' for pulsesrc/pulsesink apps"
+    || fail "README.md Steps to Run must include 'wpctl status' for pulsesrc/pulsesink apps"
   grep -q "wpctl set-default <node_no.>" "$readme" \
-    || fail "README.md Steps to Run on QLI must include 'wpctl set-default <node_no.>' for pulsesrc/pulsesink apps"
+    || fail "README.md Steps to Run must include 'wpctl set-default <node_no.>' for pulsesrc/pulsesink apps"
 fi
 if (( need_pulse || need_gpu || need_ulimit || need_wayland )); then
   readme_setup_block_valid "$need_pulse" "$need_gpu" "$need_ulimit" "$need_wayland" || fail "README.md must put applicable runtime setup in one ordered &&-chained bash block"
@@ -119,19 +119,19 @@ fi
 # Deployment step ordering: scp (host) -> ssh (enter device) -> env-setup block
 # (on-device, if applicable) -> chmod +x -> run. The env-setup block must never
 # appear before scp/ssh, since it has to execute in the device's shell.
-scp_line="$(grep -n "^scp .*root@<device-ip>:/root/" "$readme" | head -1 | cut -d: -f1 || true)"
-ssh_line="$(grep -n "^ssh root@<device-ip>" "$readme" | head -1 | cut -d: -f1 || true)"
-chmod_line="$(grep -n "chmod +x /root/" "$readme" | head -1 | cut -d: -f1 || true)"
+scp_line="$(grep -n "^scp .*<user>@<device-ip>:~/" "$readme" | head -1 | cut -d: -f1 || true)"
+ssh_line="$(grep -n "^ssh <user>@<device-ip>" "$readme" | head -1 | cut -d: -f1 || true)"
+chmod_line="$(grep -n "chmod +x ~/" "$readme" | head -1 | cut -d: -f1 || true)"
 [[ -n "$scp_line" && -n "$ssh_line" && "$ssh_line" -gt "$scp_line" ]] \
-  || fail "README.md Steps to Run on QLI must ssh after scp, not before"
+  || fail "README.md Steps to Run must ssh after scp, not before"
 [[ -n "$ssh_line" && -n "$chmod_line" && "$chmod_line" -gt "$ssh_line" ]] \
-  || fail "README.md Steps to Run on QLI must chmod +x after ssh (on the device), not before"
+  || fail "README.md Steps to Run must chmod +x after ssh (on the device), not before"
 if (( need_pulse || need_gpu || need_ulimit || need_wayland )); then
   env_marker_line="$(grep -nE "OCL_ICD_FILENAMES|ulimit[[:space:]]+-n[[:space:]]+10000|wpctl[[:space:]]+status|WS=\\\$\\(find" "$readme" | head -1 | cut -d: -f1 || true)"
   [[ -n "$env_marker_line" && "$env_marker_line" -gt "$ssh_line" ]] \
-    || fail "README.md Steps to Run on QLI env-setup block must run on the device (after ssh), not on the host before scp"
+    || fail "README.md Steps to Run env-setup block must run on the device (after ssh), not on the host before scp"
   [[ -n "$env_marker_line" && "$env_marker_line" -lt "$chmod_line" ]] \
-    || fail "README.md Steps to Run on QLI env-setup block must run before chmod +x/the binary run command"
+    || fail "README.md Steps to Run env-setup block must run before chmod +x/the binary run command"
 fi
 
 if grep -Eq "Pipeline[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\([^,]+,[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\)|qti::Pipeline[[:space:]]+[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\([^,]+,[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\)" "$main"; then

@@ -125,12 +125,11 @@ def indent(msg): return f'       {msg}'
 # ── Python version ────────────────────────────────────────────────────────────
 
 def check_host_platform():
-    """Verify the host machine is Windows (deploy scripts tested on Windows)."""
+    """Verify the host machine can run deploy. Deploy scripts use paramiko for
+    all SSH/SCP, which is cross-platform, so Linux/macOS hosts are supported —
+    they're just less exercised than Windows in practice."""
     if sys.platform != 'win32':
-        return False, (
-            f'Host platform is {sys.platform!r} — deploy scripts are tested on Windows. '
-            'Run on a Windows machine.'
-        )
+        return True, f'{sys.platform} host — supported via paramiko (less tested than Windows)'
     return True, 'Windows host confirmed'
 
 
@@ -308,16 +307,18 @@ def check_local_output_dir(output_dir, repo_root=None):
 
 
 def check_local_tmp_writable():
-    """Mode C (Windows): verify C:/tmp/ is writable for pscp long-path workaround."""
-    tmp = pathlib.Path('C:/tmp/qimsdk_preflight_test')
+    """Mode C/D: verify the local staging dir for pulled binaries is writable —
+    C:/tmp/ on Windows (pscp long-path workaround), /tmp/ elsewhere."""
+    local_tmp = 'C:/tmp' if sys.platform == 'win32' else '/tmp'
+    tmp = pathlib.Path(f'{local_tmp}/qimsdk_preflight_test')
     try:
         tmp.parent.mkdir(parents=True, exist_ok=True)
         tmp.write_text('test', encoding='utf-8')
         tmp.unlink()
-        return True, 'C:/tmp/ is writable (pscp long-path workaround will work)'
+        return True, f'{local_tmp}/ is writable'
     except Exception as e:
         return False, (
-            f'C:/tmp/ is not writable: {e}.'
+            f'{local_tmp}/ is not writable: {e}.'
         )
 
 
@@ -1171,8 +1172,8 @@ def run(mode, device_ip, device_user, host_key,
         all_ok = False
         stop()
 
-    # ── 5. Local C:/tmp/ writable (Mode C/D, Windows) ────────────────────────
-    if mode in ('C', 'D') and sys.platform == 'win32':
+    # ── 5. Local staging dir writable (Mode C/D — C:/tmp/ on Windows, /tmp/ elsewhere) ──
+    if mode in ('C', 'D'):
         tmp_ok, tmp_msg = check_local_tmp_writable()
         add(ok(tmp_msg) if tmp_ok else fail(tmp_msg))
         if not tmp_ok:
