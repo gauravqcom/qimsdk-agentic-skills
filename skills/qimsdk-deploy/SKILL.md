@@ -86,9 +86,9 @@ Mode C requires on linux workstation:
 
 Note: Mode C deploy auto-provisions the workspace from scratch (SDK download+install, git clone,
 cmake configure, host-build) if not already set up. The SDK zip
-(`x86-qli-2.0-standardsdk.zip` for x86_64 hosts) is downloaded from codelinaro.org if absent.
+(`x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts) is downloaded from codelinaro.org if absent.
 If the download fails (network blocked), place the zip manually at
-`{LINUX_WORKSTATION_BUILD_DIR}/x86-qli-2.0-standardsdk.zip` and re-run.
+`{LINUX_WORKSTATION_BUILD_DIR}/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` and re-run.
 
 Mode P requires on device:
 - `python3` installed
@@ -264,14 +264,14 @@ When `configs/.env` does not exist, or when required keys for the selected mode 
 | `LINUX_WORKSTATION_PORT` | SSH port on the linux workstation | Standard Linux: use `22`. If you're not sure or using WSL, run on the machine: `grep -E '^Port' /etc/ssh/sshd_config 2>/dev/null \|\| echo "22"` | `22` |
 
 > SDK install and repo clone are auto-provisioned on first deploy if not already present.
-> If internet is blocked, place the SDK zip at `{LINUX_WORKSTATION_BUILD_DIR}/sdk.zip` (simplest) or use the arch-specific name: `x86-qli-2.0-standardsdk.zip` (x86_64) or `arm-qli-2.0-standardsdk.zip` (aarch64/WSL on ARM). The script checks for all three.
+> If internet is blocked, place the SDK zip at `{LINUX_WORKSTATION_BUILD_DIR}/sdk.zip` (simplest) or use the arch-specific name: `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (x86_64) or `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (aarch64/WSL on ARM). The script checks for all three.
 
 All Mode C keys above are required. Preflight exits immediately with `[FAIL]` if any are missing.
 
 **Mode C — optional, bring-your-own SDK/repo:**
 | Key | What it is | Example |
 |-----|-----------|---------|
-| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to an SDK installer — a `.zip` (unzipped automatically to find the installer inside) or a `.sh` (already extracted, run directly). Only consulted when the SDK is not yet installed; ignored otherwise. If not set, falls back to the existing zip-lookup + codelinaro.org download. | `/local/mnt/sdk/x86-qli-2.0-standardsdk.zip` or `/home/user/sdk-installer.sh` |
+| `LINUX_WORKSTATION_SDK_PATH` | Absolute path **on the workstation** to an SDK installer — a `.zip` (unzipped automatically to find the installer inside) or a `.sh` (already extracted, run directly). Only consulted when the SDK is not yet installed; ignored otherwise. If not set, falls back to the existing zip-lookup + codelinaro.org download. | `/local/mnt/sdk/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` or `/home/user/sdk-installer.sh` |
 | `LINUX_WORKSTATION_IMSDK_PATH` | Absolute path **on the workstation** to an already-cloned `gst-plugins-imsdk` repo. When set, this path is used directly and the git clone step is skipped entirely. If the path is set but `CMakeLists.txt` is not found there, deploy fails with a clear message — it never silently falls back to cloning a fresh copy. If not set, falls back to cloning from GitHub into `{LINUX_WORKSTATION_BUILD_DIR}/gst-plugins-imsdk`. | `/local/mnt/repos/gst-plugins-imsdk` |
 
 **Ask the user during the Mode C wizard, right after `LINUX_WORKSTATION_BUILD_DIR`:**
@@ -782,7 +782,7 @@ if not set in `.env`. Set it to override or speed up detection.
 
 | State | Indicator | Action taken |
 |-------|-----------|--------------|
-| 0 — no SDK | `images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux` absent | unzip `x86-qli-2.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
+| 0 — no SDK | `images/qcom-armv8a/sdk/environment-setup-armv8a-qcom-linux` absent | unzip `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` → run SDK installer (or download ~3.5 GB first) |
 | 1 — SDK installed | `gst-plugins-imsdk/CMakeLists.txt` absent | `git clone https://github.com/qualcomm/gst-plugins-imsdk.git` |
 | 2 — repo cloned | `gst-plugins-imsdk/build/Makefile` absent | cmake configure with host SDK toolchain |
 | 3 — cmake configured | `build/gst-sample-apps/{binary}/{binary}` absent | push source + `cmake --build build --target {binary}` |
@@ -790,8 +790,8 @@ if not set in `.env`. Set it to override or speed up detection.
 
 **SDK zip lookup:** if `LINUX_WORKSTATION_SDK_PATH` is set, that path is used directly (a `.zip`
 is unzipped to find the installer; a `.sh` is run as-is). Otherwise:
-`{LINUX_WORKSTATION_BUILD_DIR}/x86-qli-2.0-standardsdk.zip` (x86_64 hosts)
-or `arm-qli-2.0-standardsdk.zip` (aarch64 hosts). Downloaded from codelinaro.org if absent.
+`{LINUX_WORKSTATION_BUILD_DIR}/x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (x86_64 hosts)
+or `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` (aarch64 hosts). Downloaded from codelinaro.org if absent.
 If download fails (network restricted), set `LINUX_WORKSTATION_SDK_PATH` or place the zip manually
 at that path and re-run.
 
@@ -1292,7 +1292,7 @@ Fix: Do not add `add_subdirectory`. The `foreach` glob handles it — as long as
 
 
 ### Mode C (host build)
-1. **Host SDK architecture must match the linux workstation** — `x86-qli-2.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch and picks the right zip automatically. Windows ARM with WSL2 Ubuntu (aarch64) works — the ARM SDK is available on codelinaro alongside the x86 zip.
+1. **Host SDK architecture must match the linux workstation** — `x64-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for x86_64 hosts; `arm-qli-2.0-qimsdk-2.0.0-standardsdk.zip` for aarch64 hosts (e.g. WSL on ARM Windows). The skill detects host arch and picks the right zip automatically. Windows ARM with WSL2 Ubuntu (aarch64) works — the ARM SDK is available on codelinaro alongside the x86 zip.
 2. **Use local disk, not NFS home** — NFS mounts often have user quotas that cause silent write failures. Use `/local/mnt/workspace/` or similar local path.
 3. **Do NOT add `add_subdirectory()` to parent CMakeLists.txt** — the imsdk repo auto-discovers all subdirs via a `foreach` loop. Adding it explicitly causes "binary directory already used" cmake error.
 4. **Generated apps use `gst-qimsdk-` prefix** — the `qimsdk-gstreamer-dev` skill generates binaries named `gst-qimsdk-<name>`. This avoids conflicts with the imsdk repo's own apps (`gst-ai-*`). Use the binary name from `CMakeLists.txt` (`set(GST_EXAMPLE_BIN ...)`) directly — this is BOTH the cmake target name AND the output binary filename.
