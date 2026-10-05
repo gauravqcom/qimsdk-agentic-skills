@@ -6,7 +6,7 @@
     "name": "Qualcomm"
   },
   "homepage": "https://imsdkdocs.qualcomm.com",
-  "repository": "https://github.com/qualcomm/qimsdk-agentic-skills",
+  "repository": "https://github.com/gauravqcom/qimsdk-agentic-skills",
   "license": "BSD-3-Clause",
   "keywords": [
     "qimsdk",
