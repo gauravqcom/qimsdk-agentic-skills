@@ -32,7 +32,8 @@
           "compatibility": {
             "devkits": [
               "qcs9075-iq-9075-evk"
-            ]
+            ],
+            "hostOs": ["linux", "windows"]
           }
         }
       ]
@@ -67,7 +68,8 @@
           "compatibility": {
             "devkits": [
               "qcs9075-iq-9075-evk"
-            ]
+            ],
+            "hostOs": ["linux", "windows"]
           }
         }
       ]
@@ -102,7 +104,8 @@
           "compatibility": {
             "devkits": [
               "qcs9075-iq-9075-evk"
-            ]
+            ],
+            "hostOs": ["linux", "windows"]
           }
         }
       ]
@@ -139,7 +142,8 @@
           "compatibility": {
             "devkits": [
               "qcs9075-iq-9075-evk"
-            ]
+            ],
+            "hostOs": ["linux", "windows"]
           }
         }
       ]
