@@ -13,5 +13,8 @@
     "qualcomm",
     "gstreamer",
     "device-deployment"
+  ],
+  "skills": [
+    "./skills/"
   ]
 }

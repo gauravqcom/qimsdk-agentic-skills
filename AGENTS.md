@@ -8,8 +8,6 @@ This repository contains portable skill bundles for coding agents.
 - `skills-metadata/`: skill metadata records.
 - `sample-prompts/`: sample prompts for skills.
 - `.claude-plugin/plugin.json`: Claude Code plugin manifest.
-- `plugin.json`: portable Agent Plugins v1 manifest used by Codex-compatible clients.
-- `.codex-plugin/plugin.json`: Codex compatibility manifest.
 
 The manifests package the existing `skills/` directory; do not duplicate or move
 skill payloads for either client.
@@ -28,15 +26,12 @@ skill payloads for either client.
 - Skill payloads live directly under `skills/<skill-name>/`.
 - Keep sample prompts under `sample-prompts/<skill-name>/`.
 - Keep skill metadata under `skills-metadata/<skill-name>.md`.
-- Keep `.claude-plugin/plugin.json`, `plugin.json`, and
-  `.codex-plugin/plugin.json` at the repository root.
+- Keep `.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` at
+  the repository root.
 - Keep the shared plugin identity (`name`, `version`, and `description`) in
   sync across all manifests.
-- The portable root `plugin.json` must remain conformant with the closed Agent
-  Plugins v1 schema; client-specific data belongs under `extensions`.
-- If future Codex-specific hooks or apps are added, document them in the
-  `.codex-plugin/plugin.json` compatibility manifest and verify their interaction
-  with the portable root manifest before shipping.
+- Keep Claude Code and Codex plugin metadata in the shared `.claude-plugin/`
+  manifests; do not duplicate the skill payloads.
 
 ## Plugin Validation
 

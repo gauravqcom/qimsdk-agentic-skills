@@ -14,9 +14,8 @@ pull requests back to `main`.
   `SKILL.md`.
 - `skills-metadata/`: metadata records for skills.
 - `sample-prompts/`: sample prompts grouped by skill.
-- `.claude-plugin/plugin.json`: Claude Code plugin manifest.
-- `plugin.json`: portable Agent Plugins v1 manifest.
-- `.codex-plugin/plugin.json`: Codex compatibility manifest.
+- `.claude-plugin/plugin.json`: shared Claude Code and Codex plugin manifest.
+- `.claude-plugin/marketplace.json`: marketplace catalog for plugin installation.
 
 The manifests package the shared `skills/` directory. Do not duplicate or move
 skill payloads when updating plugin packaging.
@@ -49,7 +48,7 @@ Keep the top-level layout focused on the documented public release directories u
    the matching metadata file under `skills-metadata/` and any relevant sample
    prompts under `sample-prompts/`. If you change plugin identity or release
    metadata, keep `name`, `version`, and `description` synchronized in
-   `.claude-plugin/plugin.json`, `plugin.json`, and `.codex-plugin/plugin.json`.
+   `.claude-plugin/plugin.json`.
 6. Commit with DCO signoff:
 
     ```bash
