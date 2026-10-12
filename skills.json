@@ -9,7 +9,17 @@
       "useCases": [
         "Build a QIM SDK GStreamer C application with AI inference and postprocessing",
         "Build a gst-launch-1.0 pipeline with AI inference and postprocessing",
-        "Build a native QIM SDK GStreamer C application"
+        "Build a native QIM SDK GStreamer C application",
+        "Build a qimsdk gst-launch-1.0 MP4-to-MP4 YOLOX object-detection pipeline",
+        "Create a 2x2 MP4-to-display AI wall with classification, face detection, segmentation, and object detection",
+        "Build an IMSDK MP4-to-display pipeline with YOLOX detection followed by MobileNet classification",
+        "Build QIM SDK C camera-to-Wayland gesture pipeline with palm detection, landmarks, embedding, classification",
+        "Build a QIM SDK GStreamer C MP4-to-display audio pipeline using FLAC and YAMNet classification",
+        "Build a native IMSDK C MP4-to-display application with person-triggered MP4 recording",
+        "Build an RTSP-to-RTSP YOLOv8 pipeline streaming annotated video and detection metadata",
+        "Build a gst-launch-1.0 SNPE DSP object-detection pipeline from MP4 to Wayland display",
+        "Build a gst-launch-1.0 QNN HTP object-detection pipeline from camera to Wayland display",
+        "Bridge camera frames between GStreamer C pipelines using AppSrc and AppSink"
       ],
       "owner": "qimsdk",
       "tags": [
@@ -26,6 +36,12 @@
       ],
       "license": "BSD-3-Clause-Clear",
       "homepage": "https://imsdkdocs.qualcomm.com/app-builder-coding-agent",
+      "triggers": [
+        {
+          "action": "suggest-install",
+          "tool": "install_sdk"
+        }
+      ],
       "versions": [
         {
           "version": "1.0.0",
@@ -36,13 +52,26 @@
           ],
           "compatibility": {
             "devkits": [
-              "qcs9075-iq-9075-evk"
+              "qcs6490-rb3gen2-vision-kit",
+              "qcs6490-rb3gen2-core-kit",
+              "qcs6490-rb3gen2-vision-lite-kit",
+              "qcs9075-iq-9075-evk",
+              "qcs8275-iq-8275-evk-pro"
             ],
             "hostOs": ["linux", "windows"],
+            "targetOs": [
+              {
+                "os": "qualcomm_linux",
+                "variant": "qualcomm-linux-proprietary",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
+              }
+            ],
             "sdks": [
               {
-                "id": "QIMSDK",
-                "minVersion": "2.0.0"
+                "id": "QIMPSDK ARMv8a",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
               }
             ]
           }
@@ -57,7 +86,17 @@
       "useCases": [
         "Build a QIM SDK C++ AI pipeline with inference and postprocessing",
         "Build a QIM SDK C++ multimedia pipeline",
-        "Build a QIM SDK C++ object-detection pipeline"
+        "Build a QIM SDK C++ object-detection pipeline",
+        "Build an IM SDK C++ MP4-to-MP4 YOLOv8 object-detection application",
+        "Create a 2x2 MP4-to-display AI wall with classification, face detection, segmentation, and object detection",
+        "Build a QIM SDK C++ MP4-to-display ROI pipeline with person detection followed by PPE detection",
+        "Build IM SDK C++ camera-to-Wayland gesture pipeline with palm detection, landmarks, embedding, classification",
+        "Build a QIM SDK C++ MP4-to-display audio pipeline using FLAC and YAMNet classification",
+        "Add custom preprocessing or postprocessing for MediaPipe pose estimation in camera-to-display pipeline",
+        "Generate a QIMPSDK C++ camera-to-Wayland YOLOv8 application from YAML configuration",
+        "Build an IM SDK C++ SNPE DSP object-detection pipeline from MP4 to Wayland display",
+        "Build a QIM SDK C++ QNN HTP object-detection pipeline from camera to Wayland display",
+        "Bridge ISP camera frames between C++ pipelines using AppSrc and AppSink"
       ],
       "owner": "qimsdk",
       "tags": [
@@ -73,6 +112,12 @@
       ],
       "license": "BSD-3-Clause-Clear",
       "homepage": "https://imsdkdocs.qualcomm.com/app-builder-coding-agent",
+      "triggers": [
+        {
+          "action": "suggest-install",
+          "tool": "install_sdk"
+        }
+      ],
       "versions": [
         {
           "version": "1.0.0",
@@ -83,13 +128,26 @@
           ],
           "compatibility": {
             "devkits": [
-              "qcs9075-iq-9075-evk"
+              "qcs6490-rb3gen2-vision-kit",
+              "qcs6490-rb3gen2-core-kit",
+              "qcs6490-rb3gen2-vision-lite-kit",
+              "qcs9075-iq-9075-evk",
+              "qcs8275-iq-8275-evk-pro"
             ],
             "hostOs": ["linux", "windows"],
+            "targetOs": [
+              {
+                "os": "qualcomm_linux",
+                "variant": "qualcomm-linux-proprietary",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
+              }
+            ],
             "sdks": [
               {
-                "id": "QIMSDK",
-                "minVersion": "2.0.0"
+                "id": "QIMPSDK ARMv8a",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
               }
             ]
           }
@@ -104,7 +162,17 @@
       "useCases": [
         "Build a QIM SDK Python AI pipeline with inference and postprocessing",
         "Build a QIM SDK Python multimedia pipeline",
-        "Build a QIM SDK Python object-detection pipeline"
+        "Build a QIM SDK Python object-detection pipeline",
+        "Build a QIM SDK Python MP4-to-MP4 YOLOv8 object-detection application",
+        "Create a 2x2 MP4-to-display AI wall with classification, face detection, segmentation, and object detection",
+        "Build a QIMPSDK Python MP4-to-display ROI pipeline with person detection followed by PPE detection",
+        "Build IM SDK Python camera-to-Wayland gesture pipeline with palm detection, landmarks, embedding, classification",
+        "Build a QIM SDK Python MP4-to-display audio pipeline using FLAC and YAMNet classification",
+        "Add custom preprocessing or postprocessing for MediaPipe pose estimation in camera-to-display pipeline",
+        "Generate a qimsdk Python camera-to-Wayland YOLOv8 application from YAML configuration",
+        "Build a qimsdk Python SNPE DSP object-detection pipeline from MP4 to Wayland display",
+        "Build an IMSDK Python QNN HTP object-detection pipeline from camera to Wayland display",
+        "Bridge application-managed NV12 video buffers using Python AppSrc and AppSink callbacks"
       ],
       "owner": "qimsdk",
       "tags": [
@@ -120,6 +188,12 @@
       ],
       "license": "BSD-3-Clause-Clear",
       "homepage": "https://imsdkdocs.qualcomm.com/app-builder-coding-agent",
+      "triggers": [
+        {
+          "action": "suggest-install",
+          "tool": "install_sdk"
+        }
+      ],
       "versions": [
         {
           "version": "1.0.0",
@@ -130,13 +204,26 @@
           ],
           "compatibility": {
             "devkits": [
-              "qcs9075-iq-9075-evk"
+              "qcs6490-rb3gen2-vision-kit",
+              "qcs6490-rb3gen2-core-kit",
+              "qcs6490-rb3gen2-vision-lite-kit",
+              "qcs9075-iq-9075-evk",
+              "qcs8275-iq-8275-evk-pro"
             ],
             "hostOs": ["linux", "windows"],
+            "targetOs": [
+              {
+                "os": "qualcomm_linux",
+                "variant": "qualcomm-linux-proprietary",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
+              }
+            ],
             "sdks": [
               {
-                "id": "QIMSDK",
-                "minVersion": "2.0.0"
+                "id": "QIMPSDK ARMv8a",
+                "minVersion": "qli-2.0-rc2",
+                "maxVersion": "qli-2.0"
               }
             ]
           }
