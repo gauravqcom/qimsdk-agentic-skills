@@ -6,6 +6,11 @@
       "displayName": "QIM SDK GStreamer App Builder",
       "description": "Build, debug, and package QIM SDK GStreamer native pipelines and C applications for AI and multimedia workflows.",
       "category": "devtools",
+      "useCases": [
+        "Build a QIM SDK GStreamer C application with AI inference and postprocessing",
+        "Build a gst-launch-1.0 pipeline with AI inference and postprocessing",
+        "Build a native QIM SDK GStreamer C application"
+      ],
       "owner": "qimsdk",
       "tags": [
         "qimsdk",
@@ -49,6 +54,11 @@
       "displayName": "QIM SDK C++ App Builder",
       "description": "Build QIM SDK C++ applications and AI or multimedia pipelines using documented SDK APIs.",
       "category": "devtools",
+      "useCases": [
+        "Build a QIM SDK C++ AI pipeline with inference and postprocessing",
+        "Build a QIM SDK C++ multimedia pipeline",
+        "Build a QIM SDK C++ object-detection pipeline"
+      ],
       "owner": "qimsdk",
       "tags": [
         "qimsdk",
@@ -91,6 +101,11 @@
       "displayName": "QIM SDK Python App Builder",
       "description": "Build QIM SDK Python applications and AI or multimedia pipelines using the qimsdk package.",
       "category": "devtools",
+      "useCases": [
+        "Build a QIM SDK Python AI pipeline with inference and postprocessing",
+        "Build a QIM SDK Python multimedia pipeline",
+        "Build a QIM SDK Python object-detection pipeline"
+      ],
       "owner": "qimsdk",
       "tags": [
         "qimsdk",
@@ -133,6 +148,11 @@
       "displayName": "QIM SDK Deploy",
       "description": "Build, deploy, run, and verify QIM SDK applications and plugins on Qualcomm Linux devices.",
       "category": "devtools",
+      "useCases": [
+        "Deploy and run a gst-launch-1.0 pipeline on a Qualcomm Linux device",
+        "Build, deploy, and verify a QIM SDK GStreamer C application",
+        "Deploy and verify a QIM SDK C++ or Python application"
+      ],
       "owner": "qimsdk",
       "tags": [
         "qimsdk",
