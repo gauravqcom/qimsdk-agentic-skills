@@ -33,7 +33,13 @@
             "devkits": [
               "qcs9075-iq-9075-evk"
             ],
-            "hostOs": ["linux", "windows"]
+            "hostOs": ["linux", "windows"],
+            "sdks": [
+              {
+                "id": "QIMSDK",
+                "minVersion": "2.0.0"
+              }
+            ]
           }
         }
       ]
@@ -69,7 +75,13 @@
             "devkits": [
               "qcs9075-iq-9075-evk"
             ],
-            "hostOs": ["linux", "windows"]
+            "hostOs": ["linux", "windows"],
+            "sdks": [
+              {
+                "id": "QIMSDK",
+                "minVersion": "2.0.0"
+              }
+            ]
           }
         }
       ]
@@ -105,7 +117,13 @@
             "devkits": [
               "qcs9075-iq-9075-evk"
             ],
-            "hostOs": ["linux", "windows"]
+            "hostOs": ["linux", "windows"],
+            "sdks": [
+              {
+                "id": "QIMSDK",
+                "minVersion": "2.0.0"
+              }
+            ]
           }
         }
       ]
@@ -143,7 +161,13 @@
             "devkits": [
               "qcs9075-iq-9075-evk"
             ],
-            "hostOs": ["linux", "windows"]
+            "hostOs": ["linux", "windows"],
+            "sdks": [
+              {
+                "id": "QIMSDK",
+                "minVersion": "2.0.0"
+              }
+            ]
           }
         }
       ]
