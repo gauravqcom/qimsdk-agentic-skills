@@ -89,7 +89,7 @@
         "Build a QIM SDK C++ object-detection pipeline",
         "Build an IM SDK C++ MP4-to-MP4 YOLOv8 object-detection application",
         "Create a 2x2 MP4-to-display AI wall with classification, face detection, segmentation, and object detection",
-        "Build a QIM SDK C++ MP4-to-display ROI pipeline with person detection followed by PPE detection",
+        "Build QIM SDK C++ MP4-to-display ROI pipeline with person detection followed by PPE detection",
         "Build IM SDK C++ camera-to-Wayland gesture pipeline with palm detection, landmarks, embedding, classification",
         "Build a QIM SDK C++ MP4-to-display audio pipeline using FLAC and YAMNet classification",
         "Add custom preprocessing or postprocessing for MediaPipe pose estimation in camera-to-display pipeline",
