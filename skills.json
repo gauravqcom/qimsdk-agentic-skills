@@ -142,55 +142,6 @@
           }
         }
       ]
-    },
-    {
-      "name": "qimsdk-deploy",
-      "displayName": "QIM SDK Deploy",
-      "description": "Build, deploy, run, and verify QIM SDK applications and plugins on Qualcomm Linux devices.",
-      "category": "devtools",
-      "useCases": [
-        "Deploy and run a gst-launch-1.0 pipeline on a Qualcomm Linux device",
-        "Build, deploy, and verify a QIM SDK GStreamer C application",
-        "Deploy and verify a QIM SDK C++ or Python application"
-      ],
-      "owner": "qimsdk",
-      "tags": [
-        "qimsdk",
-        "deploy",
-        "ssh",
-        "qualcomm-linux",
-        "build",
-        "run",
-        "device"
-      ],
-      "agents": [
-        "claude",
-        "codex"
-      ],
-      "license": "BSD-3-Clause-Clear",
-      "homepage": "https://imsdkdocs.qualcomm.com/app-builder-coding-agent",
-      "versions": [
-        {
-          "version": "1.0.0",
-          "path": "skills/qimsdk-deploy",
-          "docPath": "skills/qimsdk-deploy/SKILL.md",
-          "files": [
-            "skills/qimsdk-deploy/**"
-          ],
-          "compatibility": {
-            "devkits": [
-              "qcs9075-iq-9075-evk"
-            ],
-            "hostOs": ["linux", "windows"],
-            "sdks": [
-              {
-                "id": "QIMSDK",
-                "minVersion": "2.0.0"
-              }
-            ]
-          }
-        }
-      ]
     }
   ],
   "sources": []
