@@ -63,15 +63,13 @@
               {
                 "os": "qualcomm_linux",
                 "variant": "qualcomm-linux-proprietary",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0-rc2"
               }
             ],
             "sdks": [
               {
                 "id": "QIMPSDK ARMv8a",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0-rc2"
               }
             ]
           }
@@ -139,15 +137,13 @@
               {
                 "os": "qualcomm_linux",
                 "variant": "qualcomm-linux-proprietary",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0"
               }
             ],
             "sdks": [
               {
                 "id": "QIMPSDK ARMv8a",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0"
               }
             ]
           }
@@ -215,15 +211,13 @@
               {
                 "os": "qualcomm_linux",
                 "variant": "qualcomm-linux-proprietary",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0"
               }
             ],
             "sdks": [
               {
                 "id": "QIMPSDK ARMv8a",
-                "minVersion": "qli-2.0-rc2",
-                "maxVersion": "qli-2.0"
+                "minVersion": "qli-2.0"
               }
             ]
           }
